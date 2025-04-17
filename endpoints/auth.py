@@ -1,7 +1,7 @@
 from fastapi import APIRouter, HTTPException, Depends
 from pydantic import BaseModel, EmailStr
 from sqlalchemy.orm import Session
-from models.models import User, Status, StatusType  # Importar todos los modelos desde models.py
+from models.models import User
 
 
 from utils.security import hash_password, generate_verification_token , verify_password
@@ -9,12 +9,9 @@ from utils.email import send_email
 from utils.response import session_token_invalid_response
 from utils.response import create_response
 from dataBase import get_db_session
-import secrets
 import datetime
 import logging
-from typing import Any, Dict
 from utils.status import get_status
-
 import pytz
 
 bogota_tz = pytz.timezone("America/Bogota")

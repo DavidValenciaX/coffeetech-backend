@@ -1,12 +1,10 @@
 from fastapi import APIRouter, HTTPException, Depends
-from pydantic import BaseModel, EmailStr
+from pydantic import BaseModel
 from sqlalchemy.orm import Session
-from models.models import Farm, UserRoleFarm, User, UnitOfMeasure, Role, Status, StatusType, Permission, RolePermission, Invitation, Plot
+from models.models import Farm, UserRoleFarm, UnitOfMeasure, Role, Status, StatusType, Permission, RolePermission
 from utils.security import verify_session_token
 from dataBase import get_db_session
 import logging
-from typing import Any, Dict, List
-from utils.email import send_email
 from utils.response import session_token_invalid_response
 from utils.response import create_response
 from utils.status import get_status

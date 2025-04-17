@@ -1,15 +1,12 @@
 from fastapi import APIRouter, Depends
-from fastapi.responses import JSONResponse
 from pydantic import BaseModel, EmailStr
 from sqlalchemy.orm import Session
-from models.models import Farm, UserRoleFarm, User, UnitOfMeasure, Role, Status, StatusType, Permission, RolePermission, Invitation
+from models.models import Farm, UserRoleFarm, User, Role, Permission, RolePermission, Invitation
 from utils.security import verify_session_token
 from dataBase import get_db_session
 import logging
-from typing import Any, Dict, List
-from utils.email import send_email
 from utils.FCM import send_fcm_notification
-from models.models import Farm, UserRoleFarm, User, UnitOfMeasure, Role, Status, StatusType, Permission, RolePermission, Invitation, Notification
+from models.models import Farm, UserRoleFarm, User, Role, Permission, RolePermission, Invitation, Notification
 from fastapi import APIRouter, Depends
 from utils.response import create_response
 from utils.response import session_token_invalid_response
@@ -22,9 +19,7 @@ bogota_tz = pytz.timezone("America/Bogota")
 
 
 from datetime import datetime
-from models.models import Invitation, Notification, Status
-
-
+from models.models import Invitation, Notification
 
 
 # Configuración básica de logging

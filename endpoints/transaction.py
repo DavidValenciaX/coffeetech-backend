@@ -1,17 +1,16 @@
-from fastapi import APIRouter, HTTPException, Depends, Header
+from fastapi import APIRouter, Depends
 from pydantic import BaseModel, Field, constr
 from sqlalchemy.orm import Session
 from models.models import (
-    TransactionCategory,Transaction, TransactionType, Plot, Farm, User, Status, RolePermission, Permission, UserRoleFarm, Notification, NotificationType
+    TransactionCategory,Transaction, TransactionType, Plot, Farm, Status, RolePermission, Permission, UserRoleFarm
 )
 from utils.security import verify_session_token
 from dataBase import get_db_session
 import logging
-from typing import Optional, List
+from typing import Optional
 from utils.response import session_token_invalid_response, create_response
 from utils.status import get_status
-from datetime import datetime, date
-from utils.FCM import send_fcm_notification
+from datetime import date
 import pytz
 from fastapi.encoders import jsonable_encoder
 

@@ -2,13 +2,12 @@ from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
 from typing import Any, Optional
 from datetime import datetime
-from models.models import Notification, User
+from models.models import Notification
 from utils.security import verify_session_token
 from dataBase import get_db_session
 from pydantic import BaseModel
 import logging
 from fastapi.responses import ORJSONResponse
-from decimal import Decimal
 
 # Configurar el logger
 logging.basicConfig(level=logging.INFO)  # Cambia a DEBUG si necesitas más detalles

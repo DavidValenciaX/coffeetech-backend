@@ -1,5 +1,4 @@
 from passlib.context import CryptContext
-import secrets
 from fastapi import Depends, HTTPException
 from sqlalchemy.orm import Session
 from models.models import User
