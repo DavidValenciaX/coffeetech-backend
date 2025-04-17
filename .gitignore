@@ -1,0 +1,17 @@
+.env
+env
+# Ignorar carpetas __pycache__ generadas por Python
+__pycache__/
+*.pyc
+# .gitignore
+venv/
+
+coffeeTechEntorno/
+backend/
+
+
+coffeeTechEntorno/
+backend/
+
+
+coffeetech-c5cb7-7edbb325ca73.json"coffeeTechEntorno/" 
