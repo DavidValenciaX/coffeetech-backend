@@ -1,17 +1,64 @@
+# Environment files
 .env
-env
-# Ignorar carpetas __pycache__ generadas por Python
+.env.local
+.env.development
+.env.test
+.env.production
+
+# Python
 __pycache__/
+*.py[cod]
+*.so
+*.egg
+*.egg-info
+dist/
+build/
+*.pyo
+*.pyd
 *.pyc
-# .gitignore
+
+# Virtual environments
 venv/
+env/
+ENV/
+venv.bak/
+env.bak/
 
-coffeeTechEntorno/
-backend/
+# IDE specific files
+.idea/
+.vscode/
+*.swp
+*.swo
+*.sublime-workspace
+*.sublime-project
 
+# Database files
+*.db
+*.sqlite
+*.sqlite3
 
-coffeeTechEntorno/
-backend/
+# Log files
+*.log
+logs/
 
+# OS generated files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
 
-coffeetech-c5cb7-7edbb325ca73.json"coffeeTechEntorno/" 
+# Testing
+.coverage
+htmlcov/
+.pytest_cache/
+
+# Jupyter Notebook
+.ipynb_checkpoints/
+
+# Package manager specific
+Pipfile.lock
+poetry.lock
+yarn.lock
