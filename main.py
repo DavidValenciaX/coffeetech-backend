@@ -14,6 +14,7 @@ from utils.FCM import send_fcm_notification
 from datetime import datetime, timedelta
 import pytz
 import logging
+from contextlib import asynccontextmanager
 
 os.environ["CUDA_VISIBLE_DEVICES"] = "-1"
 
@@ -168,13 +169,26 @@ scheduler = BackgroundScheduler(timezone="America/Bogota")
 scheduler.add_job(send_daily_reminders, CronTrigger(hour=5, minute=0))
 
 # Iniciar el programador al iniciar la aplicación
-@app.on_event("startup")
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    # Startup: Start the scheduler
+    if not scheduler.running:
+        scheduler.start()
+        logger.info("Scheduler iniciado y programado para enviar recordatorios diarios a las 5 AM.")
+    yield
+    # Shutdown: Stop the scheduler
+    if scheduler.running:
+        scheduler.shutdown()
+        logger.info("Scheduler detenido.")
+
+app = FastAPI(lifespan=lifespan)
 def startup_event():
     if not scheduler.running:
         scheduler.start()
         logger.info("Scheduler iniciado y programado para enviar recordatorios diarios a las 5 AM.")
 
-@app.on_event("shutdown")
+# The shutdown event is now handled in the lifespan context manager above
+# This decorator is deprecated and can be removed since we're using lifespan
 def shutdown_event():
     if scheduler.running:
         scheduler.shutdown()
