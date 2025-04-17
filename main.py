@@ -27,29 +27,6 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 
-saved_model_path_vgg = "modelsIA/Modelo-Enfermedades"
-saved_model_path_def = "modelsIA/Modelo-Deficiencias"
-onnx_model_path = 'modelsIA/Modelo-EstadosMaduracion/best.onnx'
-
-if not os.path.exists(saved_model_path_vgg):
-    logger.warning(f"El modelo VGG no se encuentra en la ruta: {saved_model_path_vgg}")
-else:
-    logger.warning(f"El modelo VGG existe en la ruta: {saved_model_path_vgg}")
-
-
-# Verificar modelo de deficiencias
-if not os.path.exists(saved_model_path_def):
-    logger.warning(f"El modelo de deficiencias no se encuentra en la ruta: {saved_model_path_def}")
-else:
-    logger.warning(f"El modelo de deficiencias existe en la ruta: {saved_model_path_def}")
-
-# Verificar modelo ONNX
-if not os.path.exists(onnx_model_path):
-    logger.warning(f"El modelo ONNX no se encuentra en la ruta: {onnx_model_path}")
-else:
-    logger.warning(f"El modelo ONNX existe en la ruta: {onnx_model_path}")
-
-
 # Incluir las rutas de auth con prefijo y etiqueta
 app.include_router(auth.router, prefix="/auth", tags=["Autenticación"])
 
@@ -65,24 +42,16 @@ app.include_router(invitation.router, prefix="/invitation", tags=["Invitaciones"
 # Incluir las rutas de gestión de lotes
 app.include_router(plots.router, prefix="/plots", tags=["Lotes"])
 
-# Incluir las rutas de gestión de floraciones
-app.include_router(flowering.router, prefix="/flowering", tags=["Floraciones"])
-
 # Incluir las rutas de notificaciones
 app.include_router(notification.router, prefix="/notification", tags=["Notificaciones"])
 
 # Incluir las rutas de colaboradores
 app.include_router(collaborators.router, prefix="/collaborators", tags=["Collaborators"])
 
-# Incluir las rutas de labores culturales
-app.include_router(culturalWorkTask.router, prefix="/culturalWorkTask", tags=["culturalWorkTask"])
-
 # Incluir las rutas de transacciones
 app.include_router(transaction.router, prefix="/transaction", tags=["transaction"])
 
 app.include_router(reports.router, prefix="/reports", tags=["Reports"])
-
-app.include_router(detection.router, prefix="/detection", tags=["Detection"])
 
 # Incluir las rutas de farm con prefijo y etiqueta
 
