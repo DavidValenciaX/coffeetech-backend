@@ -382,9 +382,9 @@ def edit_collaborator_role(
     # 9. Verificar permisos necesarios para cambiar al nuevo rol
     permission_name = ""
     if edit_request.new_role == "Administrador de finca":
-        permission_name = "edit_administrador_farm"
+        permission_name = "edit_administrator_farm"
     elif edit_request.new_role == "Operador de campo":
-        permission_name = "edit_operador_farm"
+        permission_name = "edit_operator_farm"
 
     if not permission_name:
         logger.error(f"Rol deseado '{edit_request.new_role}' no es válido")
@@ -637,9 +637,9 @@ def delete_collaborator(
     logger.info(f"Rol del colaborador: {collaborator_role.name}")
 
     if collaborator_role.name == "Administrador de finca":
-        required_permission_name = "delete_administrador_farm"
+        required_permission_name = "delete_administrator_farm"
     elif collaborator_role.name == "Operador de campo":
-        required_permission_name = "delete_operador_farm"
+        required_permission_name = "delete_operator_farm"
     else:
         logger.error(f"Rol '{collaborator_role.name}' no reconocido para eliminación")
         return create_response(

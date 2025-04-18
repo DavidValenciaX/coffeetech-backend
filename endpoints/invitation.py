@@ -116,7 +116,7 @@ def create_invitation(invitation_data: InvitationCreate, session_token: str, db:
     if suggested_role.name == "Administrador de finca":
         has_permission_to_invite = db.query(RolePermission).join(Permission).filter(
             RolePermission.role_id == user_role_farm.role_id,
-            Permission.name == "add_administrador_farm"
+            Permission.name == "add_administrator_farm"
         ).first()
         if not has_permission_to_invite:
             return create_response("error", "No tienes permiso para invitar a un Administrador de Finca", status_code=403)
@@ -124,7 +124,7 @@ def create_invitation(invitation_data: InvitationCreate, session_token: str, db:
     elif suggested_role.name == "Operador de campo":
         has_permission_to_invite = db.query(RolePermission).join(Permission).filter(
             RolePermission.role_id == user_role_farm.role_id,
-            Permission.name == "add_operador_farm"
+            Permission.name == "add_operator_farm"
         ).first()
         if not has_permission_to_invite:
             return create_response("error", "No tienes permiso para invitar a un Operador de Campo", status_code=403)
