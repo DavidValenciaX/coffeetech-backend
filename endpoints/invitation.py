@@ -1,18 +1,15 @@
 from fastapi import APIRouter, Depends
 from pydantic import BaseModel, EmailStr
 from sqlalchemy.orm import Session
-from models.models import Farm, UserRoleFarm, User, Role, Permission, RolePermission, Invitation
 from utils.security import verify_session_token
 from dataBase import get_db_session
 import logging
 from utils.FCM import send_fcm_notification
 from models.models import Farm, UserRoleFarm, User, Role, Permission, RolePermission, Invitation, Notification
-from fastapi import APIRouter, Depends
 from utils.response import create_response
 from utils.response import session_token_invalid_response
 from utils.status import get_status
 from models.models import NotificationType
-
 import pytz
 
 bogota_tz = pytz.timezone("America/Bogota")
@@ -38,37 +35,8 @@ class InvitationCreate(BaseModel):
         farm_id (int): Identificador de la finca a la que se invita.
     """
     email: EmailStr
-    suggested_role: str  # El campo de role es una cadena
+    suggested_role: str
     farm_id: int
-
-# Función auxiliar para crear una respuesta uniforme
-
-# Función auxiliar para verificar si el usuario tiene un permiso específico
-def has_permission(user: User, permission_name: str, db: Session) -> bool:
-    """
-    Verifica si el usuario tiene un permiso específico.
-
-    Args:
-        user (User): Usuario a verificar.
-        permission_name (str): Nombre del permiso a verificar.
-        db (Session): Sesión de base de datos.
-
-    Returns:
-        bool: True si el usuario tiene el permiso, False en caso contrario.
-    """
-    # Obtener los roles asociados al usuario en la finca
-    user_roles = db.query(UserRoleFarm).filter(UserRoleFarm.user_id == user.user_id).all()
-
-    for user_role in user_roles:
-        # Obtener los permisos asociados al rol del usuario
-        role_permissions = db.query(RolePermission).filter(RolePermission.role_id == user_role.role_id).all()
-
-        # Verificar si el permiso está en los permisos asociados al rol
-        for role_permission in role_permissions:
-            permission = db.query(Permission).filter(Permission.permission_id == role_permission.permission_id).first()
-            if permission and permission.name == permission_name:
-                return True
-    return False
 
 @router.post("/create-invitation")
 def create_invitation(invitation_data: InvitationCreate, session_token: str, db: Session = Depends(get_db_session)):
