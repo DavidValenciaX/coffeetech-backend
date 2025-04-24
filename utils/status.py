@@ -1,31 +1,42 @@
-from sqlalchemy.orm import Session  # Asegúrate de importar Session
-from models.models import Status, StatusType  # Importar Status y StatusType
+from sqlalchemy.orm import Session
+from models.models import (
+    UserState, FarmState, PlotState, NotificationState, 
+    UserFarmRoleState, TransactionState, InvitationState
+)
+import logging
 
-def get_status(db: Session, status_name: str, status_type_name: str) -> Status:
+logger = logging.getLogger(__name__)
+
+def get_status(db: Session, status_name: str, entity_type: str):
     """
-    Obtiene un objeto Status basado en el nombre y tipo de estado proporcionados.
-
+    Obtiene el estado para diferentes entidades.
+    
     Args:
-        db (Session): La sesión de base de datos activa.
-        status_name (str): El nombre del estado que se desea buscar.
-        status_type_name (str): El nombre del tipo de estado asociado.
-
+        db (Session): Sesión de la base de datos.
+        status_name (str): Nombre del estado a obtener (e.g., "Activo", "Inactivo").
+        entity_type (str): Tipo de entidad (e.g., "Farm", "User", "Plot").
+        
     Returns:
-        Status: El objeto Status correspondiente, o None si no se encuentra.
+        El objeto de estado si se encuentra, None en caso contrario.
     """
-    # Obtener el status_type correspondiente al nombre dado
-    status_type = db.query(StatusType).filter(StatusType.name == status_type_name).first()
-
-    if not status_type:
-        return None  # Devuelve None si no se encuentra el tipo de estatus
-
-    # Obtener el estado basado en el nombre y el tipo de estatus
-    status = db.query(Status).filter(
-        Status.name == status_name,
-        Status.status_type_id == status_type.status_type_id
-    ).first()
-
-    if not status:
-        return None  # Devuelve None si no se encuentra el estado
-
-    return status
+    try:
+        if entity_type.lower() == "user":
+            return db.query(UserState).filter(UserState.name == status_name).first()
+        elif entity_type.lower() == "farm":
+            return db.query(FarmState).filter(FarmState.name == status_name).first()
+        elif entity_type.lower() == "plot":
+            return db.query(PlotState).filter(PlotState.name == status_name).first()
+        elif entity_type.lower() == "notification":
+            return db.query(NotificationState).filter(NotificationState.name == status_name).first()
+        elif entity_type.lower() == "user_role_farm" or entity_type.lower() == "user_farm_role":
+            return db.query(UserFarmRoleState).filter(UserFarmRoleState.name == status_name).first()
+        elif entity_type.lower() == "transaction":
+            return db.query(TransactionState).filter(TransactionState.name == status_name).first()
+        elif entity_type.lower() == "invitation":
+            return db.query(InvitationState).filter(InvitationState.name == status_name).first()
+        else:
+            logger.error(f"Tipo de entidad desconocido: {entity_type}")
+            return None
+    except Exception as e:
+        logger.error(f"Error al obtener el estado '{status_name}' para '{entity_type}': {str(e)}")
+        return None

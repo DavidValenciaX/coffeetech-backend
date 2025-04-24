@@ -1,7 +1,7 @@
 from fastapi import APIRouter, HTTPException, Depends
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
-from models.models import Farm, UserRoleFarm, UnitOfMeasure, Role, Status, StatusType, Permission, RolePermission
+from models.models import Farm, UserRoleFarm, AreaUnit, Role, FarmState, RolePermission, Permission
 from utils.security import verify_session_token
 from dataBase import get_db_session
 import logging
@@ -136,7 +136,7 @@ def create_farm(request: CreateFarmRequest, session_token: str, db: Session = De
     existing_farm = db.query(Farm).join(UserRoleFarm).filter(
         Farm.name == request.name,
         UserRoleFarm.user_id == user.user_id,
-        Farm.status_id == active_farm_status.status_id  # Filtrar solo por fincas activas
+        Farm.farm_status_id == active_farm_status.status_id  # Filtrar solo por fincas activas
     ).first()
 
     if existing_farm:
@@ -144,8 +144,8 @@ def create_farm(request: CreateFarmRequest, session_token: str, db: Session = De
         return create_response("error", f"Ya existe una finca activa con el nombre '{request.name}' para el propietario")
 
     # Buscar la unidad de medida (unitMeasure)
-    unit_of_measure = db.query(UnitOfMeasure).filter(UnitOfMeasure.name == request.unitMeasure).first()
-    if not unit_of_measure:
+    area_unit = db.query(AreaUnit).filter(AreaUnit.name == request.unitMeasure).first()
+    if not area_unit:
         logger.warning("Unidad de medida no válida: %s", request.unitMeasure)
         return create_response("error", "Unidad de medida no válida")
     
@@ -161,8 +161,8 @@ def create_farm(request: CreateFarmRequest, session_token: str, db: Session = De
         new_farm = Farm(
             name=request.name,
             area=request.area,
-            area_unit_id=unit_of_measure.unit_of_measure_id,
-            status_id=status_record.status_id
+            area_unit_id=area_unit.area_unit_id,
+            farm_status_id=status_record.status_id
         )
         db.add(new_farm)
         db.commit()
@@ -244,27 +244,27 @@ def list_farm(session_token: str, db: Session = Depends(get_db_session)):
 
     try:
         # Realizar la consulta con los filtros adicionales de estado activo
-        farms = db.query(Farm, UnitOfMeasure, Status, Role).select_from(UserRoleFarm).join(
+        farms = db.query(Farm, AreaUnit, FarmState, Role).select_from(UserRoleFarm).join(
             Farm, UserRoleFarm.farm_id == Farm.farm_id
         ).join(
-            UnitOfMeasure, Farm.area_unit_id == UnitOfMeasure.unit_of_measure_id
+            AreaUnit, Farm.area_unit_id == AreaUnit.area_unit_id
         ).join(
-            Status, Farm.status_id == Status.status_id
+            FarmState, Farm.farm_status_id == FarmState.farm_status_id
         ).join(
             Role, UserRoleFarm.role_id == Role.role_id
         ).filter(
             UserRoleFarm.user_id == user.user_id,
             UserRoleFarm.status_id == active_urf_status.status_id,  # Filtrar por estado activo en user_role_farm
-            Farm.status_id == active_farm_status.status_id         # Filtrar por estado activo en Farm
+            Farm.farm_status_id == active_farm_status.status_id         # Filtrar por estado activo en Farm
         ).all()
 
         farm_list = []
-        for farm, unit_of_measure, status, role in farms:
+        for farm, area_unit, status, role in farms:
             farm_list.append(ListFarmResponse(
                 farm_id=farm.farm_id,
                 name=farm.name,
                 area=farm.area,
-                unit_of_measure=unit_of_measure.name,
+                unit_of_measure=area_unit.name,
                 status=status.name,
                 role=role.name
             ))
@@ -326,7 +326,7 @@ def update_farm(request: UpdateFarmRequest, session_token: str, db: Session = De
         UserRoleFarm.farm_id == request.farm_id,
         UserRoleFarm.user_id == user.user_id,
         UserRoleFarm.status_id == active_urf_status.status_id,
-        Farm.status_id == active_farm_status.status_id
+        Farm.farm_status_id == active_farm_status.status_id
     ).first()
 
     if not user_role_farm:
@@ -357,8 +357,8 @@ def update_farm(request: UpdateFarmRequest, session_token: str, db: Session = De
         return create_response("error", "El área de la finca debe ser un número positivo mayor que cero")
 
     # Buscar la unidad de medida (unitMeasure)
-    unit_of_measure = db.query(UnitOfMeasure).filter(UnitOfMeasure.name == request.unitMeasure).first()
-    if not unit_of_measure:
+    area_unit = db.query(AreaUnit).filter(AreaUnit.name == request.unitMeasure).first()
+    if not area_unit:
         logger.warning("Unidad de medida no válida: %s", request.unitMeasure)
         return create_response("error", "Unidad de medida no válida")
 
@@ -376,7 +376,7 @@ def update_farm(request: UpdateFarmRequest, session_token: str, db: Session = De
                 Farm.farm_id != request.farm_id,
                 UserRoleFarm.user_id == user.user_id,
                 Role.name == "Propietario",  # Verificar que el usuario sea propietario
-                Farm.status_id == active_farm_status.status_id,
+                Farm.farm_status_id == active_farm_status.status_id,
                 UserRoleFarm.status_id == active_urf_status.status_id
             ).first()
 
@@ -387,7 +387,7 @@ def update_farm(request: UpdateFarmRequest, session_token: str, db: Session = De
         # Actualizar la finca
         farm.name = request.name
         farm.area = request.area
-        farm.area_unit_id = unit_of_measure.unit_of_measure_id
+        farm.area_unit_id = area_unit.area_unit_id
 
         db.commit()
         db.refresh(farm)
@@ -467,18 +467,18 @@ def get_farm(farm_id: int, session_token: str, db: Session = Depends(get_db_sess
 
     try:
         # Verificar que la finca y la relación user_role_farm estén activas
-        farm_data = db.query(Farm, UnitOfMeasure, Status, Role).select_from(UserRoleFarm).join(
+        farm_data = db.query(Farm, AreaUnit, FarmState, Role).select_from(UserRoleFarm).join(
             Farm, UserRoleFarm.farm_id == Farm.farm_id
         ).join(
-            UnitOfMeasure, Farm.area_unit_id == UnitOfMeasure.unit_of_measure_id
+            AreaUnit, Farm.area_unit_id == AreaUnit.area_unit_id
         ).join(
-            Status, Farm.status_id == Status.status_id
+            FarmState, Farm.farm_status_id == FarmState.farm_status_id
         ).join(
             Role, UserRoleFarm.role_id == Role.role_id
         ).filter(
             UserRoleFarm.user_id == user.user_id,
             UserRoleFarm.status_id == active_urf_status.status_id,
-            Farm.status_id == active_farm_status.status_id,
+            Farm.farm_status_id == active_farm_status.status_id,
             Farm.farm_id == farm_id
         ).first()
 
@@ -487,14 +487,14 @@ def get_farm(farm_id: int, session_token: str, db: Session = Depends(get_db_sess
             logger.warning("Finca no encontrada o no pertenece al usuario")
             return create_response("error", "Finca no encontrada o no pertenece al usuario")
 
-        farm, unit_of_measure, status, role = farm_data
+        farm, area_unit, status, role = farm_data
 
         # Crear la respuesta en el formato esperado
         farm_response = ListFarmResponse(
             farm_id=farm.farm_id,
             name=farm.name,
             area=farm.area,
-            unit_of_measure=unit_of_measure.name,
+            unit_of_measure=area_unit.name,
             status=status.name,
             role=role.name
         )
@@ -563,7 +563,7 @@ def delete_farm(farm_id: int, session_token: str, db: Session = Depends(get_db_s
         UserRoleFarm.farm_id == farm_id,
         UserRoleFarm.user_id == user.user_id,
         UserRoleFarm.status_id == active_urf_status.status_id,
-        Farm.status_id == active_farm_status.status_id
+        Farm.farm_status_id == active_farm_status.status_id
     ).first()
 
     if not user_role_farm:
@@ -588,21 +588,19 @@ def delete_farm(farm_id: int, session_token: str, db: Session = Depends(get_db_s
             return create_response("error", "Finca no encontrada")
 
         # Cambiar el estado de la finca a "Inactiva"
-        inactive_farm_status = db.query(Status).join(StatusType).filter(
-            Status.name == "Inactiva",
-            StatusType.name == "Farm"
+        inactive_farm_status = db.query(FarmState).filter(
+            FarmState.name == "Inactiva"
         ).first()
 
         if not inactive_farm_status:
             logger.error("No se encontró el estado 'Inactiva' para el tipo 'Farm'")
             raise HTTPException(status_code=400, detail="No se encontró el estado 'Inactiva' para el tipo 'Farm'.")
 
-        farm.status_id = inactive_farm_status.status_id
+        farm.farm_status_id = inactive_farm_status.farm_status_id
 
         # Cambiar el estado de todas las relaciones en user_role_farm a "Inactiva"
-        inactive_urf_status = db.query(Status).join(StatusType).filter(
-            Status.name == "Inactiva",
-            StatusType.name == "user_role_farm"
+        inactive_urf_status = db.query(FarmState).filter(
+            FarmState.name == "Inactiva"
         ).first()
 
         if not inactive_urf_status:
@@ -611,7 +609,7 @@ def delete_farm(farm_id: int, session_token: str, db: Session = Depends(get_db_s
 
         user_role_farms = db.query(UserRoleFarm).filter(UserRoleFarm.farm_id == farm_id).all()
         for urf in user_role_farms:
-            urf.status_id = inactive_urf_status.status_id
+            urf.status_id = inactive_urf_status.farm_status_id
 
         db.commit()
         logger.info("Finca y relaciones en user_role_farm puestas en estado 'Inactiva' para la finca con ID %s", farm_id)

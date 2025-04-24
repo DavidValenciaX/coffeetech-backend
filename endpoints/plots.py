@@ -77,7 +77,7 @@ def create_plot(request: CreatePlotRequest, session_token: str, db: Session = De
         return create_response("error", "No se encontró el estado 'Activo' para el tipo 'Plot'", status_code=400)
 
     # Verificar que la finca existe y está activa
-    farm = db.query(Farm).filter(Farm.farm_id == request.farm_id, Farm.status_id == active_farm_status.status_id).first()
+    farm = db.query(Farm).filter(Farm.farm_id == request.farm_id, Farm.farm_status_id == active_farm_status.status_id).first()
     if not farm:
         logger.warning("La finca con ID %s no existe o no está activa", request.farm_id)
         return create_response("error", "La finca no existe o no está activa")

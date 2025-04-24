@@ -2,7 +2,7 @@ from fastapi import APIRouter, Depends
 from pydantic import BaseModel, Field, constr
 from sqlalchemy.orm import Session
 from models.models import (
-    TransactionCategory,Transaction, TransactionType, Plot, Farm, Status, RolePermission, Permission, UserRoleFarm
+    TransactionCategory,Transaction, TransactionType, Plot, Farm, TransactionState, RolePermission, Permission, UserRoleFarm
 )
 from utils.security import verify_session_token
 from dataBase import get_db_session

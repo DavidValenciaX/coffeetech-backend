@@ -8,8 +8,7 @@ from models.models import (
     User,
     RolePermission,
     Permission,
-    Status,
-    StatusType,
+    UserFarmRoleState,
     Role
 )
 from utils.security import verify_session_token
