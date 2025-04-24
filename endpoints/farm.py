@@ -23,11 +23,11 @@ class CreateFarmRequest(BaseModel):
     **Atributos**:
     - **name**: Nombre de la finca (cadena de texto). Debe ser un valor no vacío ni contener solo espacios.
     - **area**: Área de la finca (float). Debe ser un número positivo mayor que cero.
-    - **unitMeasure**: Unidad de medida del área (cadena de texto). Debe ser una unidad de medida válida como 'hectáreas' o 'metros cuadrados'.
+    - **areaUnit**: Unidad de medida del área (cadena de texto). Debe ser una unidad de medida válida como 'hectáreas' o 'metros cuadrados'.
     """
     name: str
     area: float
-    unitMeasure: str
+    areaUnit: str
     
 class ListFarmResponse(BaseModel):
     """
@@ -37,14 +37,14 @@ class ListFarmResponse(BaseModel):
     - **farm_id**: ID único de la finca (entero).
     - **name**: Nombre de la finca (cadena de texto).
     - **area**: Área de la finca (float), representada en la unidad de medida especificada.
-    - **unit_of_measure**: Unidad de medida del área (cadena de texto).
+    - **area_unit**: Unidad de medida del área (cadena de texto).
     - **status**: Estado actual de la finca (cadena de texto), por ejemplo, 'Activo' o 'Inactivo'.
     - **role**: Rol del usuario en relación a la finca (cadena de texto), como 'Propietario' o 'Administrador'.
     """
     farm_id: int
     name: str
     area: float
-    unit_of_measure: str
+    area_unit: str
     status: str
     role: str
     
@@ -56,12 +56,12 @@ class UpdateFarmRequest(BaseModel):
     - **farm_id**: ID de la finca a actualizar (entero). Debe existir una finca con este ID.
     - **name**: Nuevo nombre de la finca (cadena de texto). No puede estar vacío ni contener solo espacios.
     - **area**: Nueva área de la finca (float). Debe ser un número positivo mayor que cero.
-    - **unitMeasure**: Nueva unidad de medida del área (cadena de texto). Debe ser una unidad de medida válida como 'hectáreas' o 'metros cuadrados'.
+    - **areaUnit**: Nueva unidad de medida del área (cadena de texto). Debe ser una unidad de medida válida como 'hectáreas' o 'metros cuadrados'.
     """
     farm_id: int
     name: str
     area: float
-    unitMeasure: str
+    areaUnit: str
 
 # Función auxiliar para crear una respuesta uniforme
 
@@ -81,24 +81,7 @@ def create_farm(request: CreateFarmRequest, session_token: str, db: Session = De
     - **400 Bad Request**: Si los datos de la finca no son válidos o no se encuentra el estado requerido.
     - **401 Unauthorized**: Si el token de sesión es inválido o el usuario no tiene permisos.
     - **500 Internal Server Error**: Si ocurre un error al intentar crear la finca o asignar el usuario.
-
-    **Ejemplo de respuesta exitosa**:
-    {
-        "status": "success",
-        "message": "Finca creada y usuario asignado correctamente",
-        "data": {
-            "farm_id": 1,
-            "name": "Mi Finca",
-            "area": 100.0,
-            "unit_of_measure": "hectárea"
-        }
-    }
-
-    **Ejemplo de respuesta de error**:
-    {
-        "status": "error",
-        "message": "Ya existe una finca activa con el nombre 'Mi Finca'"
-    }
+    
     """
     # Verificar el token de sesión
     user = verify_session_token(session_token, db)
@@ -149,10 +132,10 @@ def create_farm(request: CreateFarmRequest, session_token: str, db: Session = De
         logger.warning("El usuario ya tiene una finca activa con el nombre '%s'", request.name)
         return create_response("error", f"Ya existe una finca activa con el nombre '{request.name}' para el propietario")
 
-    # Buscar la unidad de medida (unitMeasure)
-    area_unit = db.query(AreaUnit).filter(AreaUnit.name == request.unitMeasure).first()
+    # Buscar la unidad de medida (areaUnit)
+    area_unit = db.query(AreaUnit).filter(AreaUnit.name == request.areaUnit).first()
     if not area_unit:
-        logger.warning("Unidad de medida no válida: %s", request.unitMeasure)
+        logger.warning("Unidad de medida no válida: %s", request.areaUnit)
         return create_response("error", "Unidad de medida no válida")
     
     # Obtener el StatusType con nombre "Farm"
@@ -202,7 +185,7 @@ def create_farm(request: CreateFarmRequest, session_token: str, db: Session = De
             "farm_id": new_farm.farm_id,
             "name": new_farm.name,
             "area": new_farm.area,
-            "unit_of_measure": request.unitMeasure
+            "area_unit": request.areaUnit
         })
     except Exception as e:
         db.rollback()
@@ -277,7 +260,7 @@ def list_farm(session_token: str, db: Session = Depends(get_db_session)):
                 farm_id=farm.farm_id,
                 name=farm.name,
                 area=farm.area,
-                unit_of_measure=area_unit.name,
+                area_unit=area_unit.name,
                 status=status.name,
                 role=role.name
             ))
@@ -369,10 +352,10 @@ def update_farm(request: UpdateFarmRequest, session_token: str, db: Session = De
         logger.warning("El área de la finca debe ser mayor que cero")
         return create_response("error", "El área de la finca debe ser un número positivo mayor que cero")
 
-    # Buscar la unidad de medida (unitMeasure)
-    area_unit = db.query(AreaUnit).filter(AreaUnit.name == request.unitMeasure).first()
+    # Buscar la unidad de medida (areaUnit)
+    area_unit = db.query(AreaUnit).filter(AreaUnit.name == request.areaUnit).first()
     if not area_unit:
-        logger.warning("Unidad de medida no válida: %s", request.unitMeasure)
+        logger.warning("Unidad de medida no válida: %s", request.areaUnit)
         return create_response("error", "Unidad de medida no válida")
 
     try:
@@ -410,7 +393,7 @@ def update_farm(request: UpdateFarmRequest, session_token: str, db: Session = De
             "farm_id": farm.farm_id,
             "name": farm.name,
             "area": farm.area,
-            "unit_of_measure": request.unitMeasure
+            "area_unit": request.areaUnit
         })
     except Exception as e:
         db.rollback()
@@ -430,35 +413,12 @@ def get_farm(farm_id: int, session_token: str, db: Session = Depends(get_db_sess
 
     **Respuesta exitosa (200):**
     - **Descripción**: Devuelve la información de la finca, incluyendo nombre, área, unidad de medida, estado y rol del usuario en relación a la finca.
-    - **Ejemplo de respuesta:**
-      ```json
-      {
-          "status": "success",
-          "message": "Finca obtenida exitosamente",
-          "data": {
-              "farm": {
-                  "farm_id": 1,
-                  "name": "Finca Ejemplo",
-                  "area": 10.5,
-                  "unit_of_measure": "Hectárea",
-                  "status": "Activo",
-                  "role": "Dueño"
-              }
-          }
-      }
-      ```
 
     **Errores:**
     - **401 Unauthorized**: Si el token de sesión es inválido o el usuario no se encuentra.
     - **400 Bad Request**: Si no se encuentra el estado "Activo" para la finca o para la relación `user_role_farm`.
     - **404 Not Found**: Si la finca no se encuentra o no pertenece al usuario.
 
-    **Ejemplo de respuesta de error:**
-    ```json
-    {
-        "status": "error",
-        "message": "Finca no encontrada o no pertenece al usuario"
-    }
     ```
     """
     # Verificar el token de sesión
@@ -507,7 +467,7 @@ def get_farm(farm_id: int, session_token: str, db: Session = Depends(get_db_sess
             farm_id=farm.farm_id,
             name=farm.name,
             area=farm.area,
-            unit_of_measure=area_unit.name,
+            area_unit=area_unit.name,
             status=status.name,
             role=role.name
         )

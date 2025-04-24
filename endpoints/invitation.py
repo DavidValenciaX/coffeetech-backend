@@ -138,10 +138,10 @@ def create_invitation(invitation_data: InvitationCreate, session_token: str, db:
         # Crear la nueva invitación
         new_invitation = Invitation(
             email=invitation_data.email,
-            suggested_role=invitation_data.suggested_role,
+            suggested_role_id=suggested_role.role_id,  # Use role_id from Role model
             farm_id=invitation_data.farm_id,
             inviter_user_id=user.user_id,  # Agregar el ID del usuario que está creando la invitación
-            date=datetime.now(bogota_tz)  # Agregar la fecha actual
+            invitation_date=datetime.now(bogota_tz)  # Changed 'date' to 'invitation_date'
         )
         db.add(new_invitation)
         db.commit()

@@ -1,6 +1,6 @@
 from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
-from models.models import Role, UnitOfMeasure, CoffeeVariety
+from models.models import Role, AreaUnit, CoffeeVariety
 from dataBase import get_db_session
 from sqlalchemy.orm import joinedload
 
@@ -40,34 +40,30 @@ def list_roles(db: Session = Depends(get_db_session)):
     }
 
 
-@router.get("/unit-measure", summary="Obtener lista de unidades de medida", description="Obtiene una lista de todas las unidades de medida disponibles junto con su tipo correspondiente.")
-def list_unit_measures(db: Session = Depends(get_db_session)):
+@router.get("/area-units", summary="Obtener lista de unidades de área", description="Obtiene una lista de todas las unidades de área disponibles.")
+def list_area_units(db: Session = Depends(get_db_session)):
     """
-    Obtiene una lista de todas las unidades de medida disponibles junto con su tipo correspondiente.
+    Obtiene una lista de todas las unidades de área disponibles.
 
     Args:
         db (Session): Sesión de base de datos proporcionada por la dependencia.
 
     Returns:
-        dict: Diccionario con el estado, mensaje y datos de las unidades de medida y sus tipos.
+        dict: Diccionario con el estado, mensaje y datos de las unidades de área.
     """
-    # Consulta todas las unidades de medida
-    units_of_measure = db.query(UnitOfMeasure).all()
+    # Consulta todas las unidades de área
+    area_units = db.query(AreaUnit).all()
 
-    # Construir la respuesta con las unidades de medida
+    # Construir la respuesta con las unidades de área
     return {
         "status": "success",
-        "message": "Unidades de medida obtenidas correctamente",
+        "message": "Unidades de área obtenidas correctamente",
         "data": [
             {
-                "unit_of_measure_id": uom.unit_of_measure_id,
-                "name": uom.name,
-                "abbreviation": uom.abbreviation,
-                "unit_of_measure_type": {
-                    "unit_of_measure_type_id": uom.unit_of_measure_type.unit_of_measure_type_id,
-                    "name": uom.unit_of_measure_type.name
-                }
-            } for uom in units_of_measure
+                "area_unit_id": unit.area_unit_id,
+                "name": unit.name,
+                "abbreviation": unit.abbreviation
+            } for unit in area_units
         ]
     }
 

@@ -57,7 +57,7 @@ class Role(Base):
     invitations = relationship("Invitation", back_populates="suggested_role")
 
 
-# Modelo para AreaUnit (antes UnitOfMeasure)
+# Modelo para AreaUnit
 class AreaUnit(Base):
     __tablename__ = 'area_units'
 
