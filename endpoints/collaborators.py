@@ -8,13 +8,14 @@ from models.models import (
     User,
     RolePermission,
     Permission,
-    UserFarmRoleState,
+    UserFarmRoleState, # Import UserFarmRoleState
     Role
 )
 from utils.security import verify_session_token
 from dataBase import get_db_session
 from utils.response import create_response, session_token_invalid_response
 from sqlalchemy import func
+from utils.status import get_status # Import get_status
 import logging
 
 
@@ -122,10 +123,7 @@ def list_collaborators(
     logger.info(f"Finca encontrada: {farm.name} (ID: {farm.farm_id})")
 
     # 3. Obtener el estado 'Activo' para 'user_role_farm'
-    active_status = db.query(Status).join(StatusType).filter(
-        Status.name == "Activo",
-        StatusType.name == "user_role_farm"
-    ).first()
+    active_status = get_status(db, "Activo", "user_role_farm") # Use get_status
 
     if not active_status:
         logger.error("Estado 'Activo' no encontrado para 'user_role_farm'")
@@ -135,7 +133,7 @@ def list_collaborators(
             status_code=400
         )
 
-    logger.info(f"Estado 'Activo' encontrado: {active_status.name} (ID: {active_status.status_id})")
+    logger.info(f"Estado 'Activo' encontrado: {active_status.name} (ID: {active_status.user_farm_role_status_id})") # Use correct ID field
 
     # 4. Obtener el permiso 'read_collaborators' con insensibilidad a mayúsculas
     read_permission = db.query(Permission).filter(
@@ -152,11 +150,11 @@ def list_collaborators(
             status_code=500
         )
 
-    # 5. Verificar si el usuario tiene el permiso 'read_collaborators' en la finca especificada
+    # Verificar si el usuario tiene el permiso 'read_collaborators' en la finca especificada
     has_permission = db.query(UserRoleFarm).join(RolePermission, UserRoleFarm.role_id == RolePermission.role_id).filter(
         UserRoleFarm.user_id == user.user_id,
         UserRoleFarm.farm_id == farm_id,
-        UserRoleFarm.status_id == active_status.status_id,
+        UserRoleFarm.user_farm_role_status_id == active_status.user_farm_role_status_id, # Changed status_id
         RolePermission.permission_id == read_permission.permission_id
     ).first()
 
@@ -177,7 +175,7 @@ def list_collaborators(
         Role, UserRoleFarm.role_id == Role.role_id
     ).filter(
         UserRoleFarm.farm_id == farm_id,
-        UserRoleFarm.status_id == active_status.status_id
+        UserRoleFarm.user_farm_role_status_id == active_status.user_farm_role_status_id # Changed status_id
     ).all()
 
     logger.info(f"Colaboradores encontrados: {collaborators_query}")
@@ -279,10 +277,7 @@ def edit_collaborator_role(
     logger.info(f"Finca encontrada: {farm.name} (ID: {farm.farm_id})")
 
     # 3. Obtener el estado 'Activo' para 'user_role_farm'
-    active_status = db.query(Status).join(StatusType).filter(
-        Status.name == "Activo",
-        StatusType.name == "user_role_farm"
-    ).first()
+    active_status = get_status(db, "Activo", "user_role_farm") # Use get_status
 
     if not active_status:
         logger.error("Estado 'Activo' no encontrado para 'user_role_farm'")
@@ -292,13 +287,12 @@ def edit_collaborator_role(
             status_code=400
         )
 
-    logger.info(f"Estado 'Activo' encontrado: {active_status.name} (ID: {active_status.status_id})")
+    logger.info(f"Estado 'Activo' encontrado: {active_status.name} (ID: {active_status.user_farm_role_status_id})") # Use correct ID field
 
-    # 4. Obtener el rol actual del usuario que realiza la acción
     user_role_farm = db.query(UserRoleFarm).filter(
         UserRoleFarm.user_id == user.user_id,
         UserRoleFarm.farm_id == farm_id,
-        UserRoleFarm.status_id == active_status.status_id
+        UserRoleFarm.user_farm_role_status_id == active_status.user_farm_role_status_id # Changed status_id
     ).first()
 
     if not user_role_farm:
@@ -346,7 +340,7 @@ def edit_collaborator_role(
     collaborator_role_farm = db.query(UserRoleFarm).filter(
         UserRoleFarm.user_id == collaborator.user_id,
         UserRoleFarm.farm_id == farm_id,
-        UserRoleFarm.status_id == active_status.status_id
+        UserRoleFarm.user_farm_role_status_id == active_status.user_farm_role_status_id # Changed status_id
     ).first()
 
     if not collaborator_role_farm:
@@ -545,10 +539,7 @@ def delete_collaborator(
     logger.info(f"Finca encontrada: {farm.name} (ID: {farm.farm_id})")
 
     # 4. Obtener el estado 'Activo' para 'user_role_farm'
-    active_status = db.query(Status).join(StatusType).filter(
-        Status.name == "Activo",
-        StatusType.name == "user_role_farm"
-    ).first()
+    active_status = get_status(db, "Activo", "user_role_farm") # Use get_status
 
     if not active_status:
         logger.error("Estado 'Activo' no encontrado para 'user_role_farm'")
@@ -558,13 +549,13 @@ def delete_collaborator(
             status_code=400
         )
 
-    logger.info(f"Estado 'Activo' encontrado: {active_status.name} (ID: {active_status.status_id})")
+    logger.info(f"Estado 'Activo' encontrado: {active_status.name} (ID: {active_status.user_farm_role_status_id})") # Use correct ID field
 
     # 5. Obtener la asociación UserRoleFarm del usuario con la finca
     user_role_farm = db.query(UserRoleFarm).filter(
         UserRoleFarm.user_id == user.user_id,
         UserRoleFarm.farm_id == farm_id,
-        UserRoleFarm.status_id == active_status.status_id
+        UserRoleFarm.user_farm_role_status_id == active_status.user_farm_role_status_id # Changed status_id
     ).first()
 
     if not user_role_farm:
@@ -603,7 +594,7 @@ def delete_collaborator(
     collaborator_role_farm = db.query(UserRoleFarm).filter(
         UserRoleFarm.user_id == collaborator.user_id,
         UserRoleFarm.farm_id == farm_id,
-        UserRoleFarm.status_id == active_status.status_id
+        UserRoleFarm.user_farm_role_status_id == active_status.user_farm_role_status_id # Changed status_id
     ).first()
 
     if not collaborator_role_farm:
@@ -681,10 +672,7 @@ def delete_collaborator(
     # 12. Eliminar la asociación del colaborador con la finca (Actualizar el estado a 'Inactivo')
     try:
         # Obtener el estado 'Inactivo' para 'user_role_farm'
-        inactive_status = db.query(Status).join(StatusType).filter(
-            Status.name == "Inactivo",
-            StatusType.name == "user_role_farm"
-        ).first()
+        inactive_status = get_status(db, "Inactivo", "user_role_farm") # Use get_status
 
         if not inactive_status:
             logger.error("Estado 'Inactivo' no encontrado para 'user_role_farm'")
@@ -694,7 +682,7 @@ def delete_collaborator(
                 status_code=500
             )
 
-        collaborator_role_farm.status_id = inactive_status.status_id
+        collaborator_role_farm.user_farm_role_status_id = inactive_status.user_farm_role_status_id # Changed status_id assignment
         db.commit()
         logger.info(f"Colaborador {collaborator.name} eliminado de la finca ID {farm_id} exitosamente")
     except Exception as e:

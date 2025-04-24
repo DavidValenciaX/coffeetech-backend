@@ -86,7 +86,7 @@ def create_plot(request: CreatePlotRequest, session_token: str, db: Session = De
     user_role_farm = db.query(UserRoleFarm).filter(
         UserRoleFarm.user_id == user.user_id,
         UserRoleFarm.farm_id == request.farm_id,
-        UserRoleFarm.status_id == active_urf_status.status_id
+        UserRoleFarm.user_farm_role_status_id == active_urf_status.user_farm_role_status_id
     ).first()
     if not user_role_farm:
         logger.warning("El usuario no está asociado con la finca con ID %s", request.farm_id)
@@ -203,7 +203,7 @@ def update_plot_general_info(request: UpdatePlotGeneralInfoRequest, session_toke
     user_role_farm = db.query(UserRoleFarm).filter(
         UserRoleFarm.user_id == user.user_id,
         UserRoleFarm.farm_id == farm.farm_id,
-        UserRoleFarm.status_id == active_urf_status.status_id
+        UserRoleFarm.user_farm_role_status_id == active_urf_status.user_farm_role_status_id
     ).first()
     if not user_role_farm:
         logger.warning("El usuario no está asociado con la finca con ID %s", farm.farm_id)
@@ -308,7 +308,7 @@ def update_plot_location(request: UpdatePlotLocationRequest, session_token: str,
     user_role_farm = db.query(UserRoleFarm).filter(
         UserRoleFarm.user_id == user.user_id,
         UserRoleFarm.farm_id == farm.farm_id,
-        UserRoleFarm.status_id == active_urf_status.status_id
+        UserRoleFarm.user_farm_role_status_id == active_urf_status.user_farm_role_status_id
     ).first()
     if not user_role_farm:
         logger.warning("El usuario no está asociado con la finca con ID %s", farm.farm_id)
@@ -378,7 +378,7 @@ def list_plots(farm_id: int, session_token: str, db: Session = Depends(get_db_se
     user_role_farm = db.query(UserRoleFarm).filter(
         UserRoleFarm.user_id == user.user_id,
         UserRoleFarm.farm_id == farm_id,
-        UserRoleFarm.status_id == active_urf_status.status_id
+        UserRoleFarm.user_farm_role_status_id == active_urf_status.user_farm_role_status_id
     ).first()
     if not user_role_farm:
         logger.warning("El usuario no está asociado con la finca con ID %s", farm_id)
@@ -463,7 +463,7 @@ def get_plot(plot_id: int, session_token: str, db: Session = Depends(get_db_sess
     user_role_farm = db.query(UserRoleFarm).filter(
         UserRoleFarm.user_id == user.user_id,
         UserRoleFarm.farm_id == farm.farm_id,
-        UserRoleFarm.status_id == active_urf_status.status_id
+        UserRoleFarm.user_farm_role_status_id == active_urf_status.user_farm_role_status_id
     ).first()
     if not user_role_farm:
         logger.warning("El usuario no está asociado con la finca con ID %s", farm.farm_id)
@@ -541,7 +541,7 @@ def delete_plot(plot_id: int, session_token: str, db: Session = Depends(get_db_s
     user_role_farm = db.query(UserRoleFarm).filter(
         UserRoleFarm.user_id == user.user_id,
         UserRoleFarm.farm_id == farm.farm_id,
-        UserRoleFarm.status_id == active_urf_status.status_id
+        UserRoleFarm.user_farm_role_status_id == active_urf_status.user_farm_role_status_id
     ).first()
     if not user_role_farm:
         logger.warning("El usuario no está asociado con la finca con ID %s", farm.farm_id)

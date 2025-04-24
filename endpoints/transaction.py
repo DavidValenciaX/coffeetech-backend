@@ -92,7 +92,7 @@ def create_transaction(
     
     user_role_farm = db.query(UserRoleFarm).filter(
         UserRoleFarm.user_id == user.user_id,
-        UserRoleFarm.status_id == active_urf_status.status_id
+        UserRoleFarm.user_farm_role_status_id == active_urf_status.user_farm_role_status_id # Changed status_id
     ).first()
     
     if not user_role_farm:
@@ -244,7 +244,7 @@ def edit_transaction(
     user_role_farm = db.query(UserRoleFarm).filter(
         UserRoleFarm.user_id == user.user_id,
         UserRoleFarm.farm_id == transaction.plot.farm_id,
-        UserRoleFarm.status_id == active_urf_status.status_id
+        UserRoleFarm.user_farm_role_status_id == active_urf_status.user_farm_role_status_id # Changed status_id
     ).first()
     
     if not user_role_farm:
@@ -306,7 +306,7 @@ def edit_transaction(
         db.refresh(transaction)
         
         # Obtener el estado actual
-        status = db.query(Status).filter(Status.status_id == transaction.status_id).first()
+        status = get_status(db, None, "Transaction", transaction.status_id) # Assuming get_status can fetch by ID
         status_name = status.name if status else "Desconocido"
         
         # Obtener el tipo de transacción actualizado
@@ -388,7 +388,7 @@ def delete_transaction(
     user_role_farm = db.query(UserRoleFarm).filter(
         UserRoleFarm.user_id == user.user_id,
         UserRoleFarm.farm_id == transaction.plot.farm_id,
-        UserRoleFarm.status_id == active_urf_status.status_id
+        UserRoleFarm.user_farm_role_status_id == active_urf_status.user_farm_role_status_id # Changed status_id
     ).first()
     
     if not user_role_farm:
@@ -469,7 +469,7 @@ def read_transactions(
     user_role_farm = db.query(UserRoleFarm).filter(
         UserRoleFarm.user_id == user.user_id,
         UserRoleFarm.farm_id == farm.farm_id,
-        UserRoleFarm.status_id == active_urf_status.status_id
+        UserRoleFarm.user_farm_role_status_id == active_urf_status.user_farm_role_status_id # Changed status_id
     ).first()
     
     if not user_role_farm:
@@ -509,14 +509,14 @@ def read_transactions(
         txn_category_name = txn_category.name if txn_category else "Desconocido"
         
         # Obtener el estado de la transacción
-        status = db.query(Status).filter(Status.status_id == txn.status_id).first()
+        status = db.query(TransactionState).filter(TransactionState.transaction_status_id == txn.status_id).first()
         status_name = status.name if status else "Desconocido"
         
         transaction_list.append({
             "transaction_id": txn.transaction_id,
             "plot_id": txn.plot_id,
             "transaction_type_name": txn_type_name,
-            "transaction_category_name": txn_category_name,  # Incluir categoría
+            "transaction_category_name": txn_category_name,
             "description": txn.description,
             "value": txn.value,
             "transaction_date": txn.transaction_date.isoformat(),

@@ -5,7 +5,7 @@ from utils.security import verify_session_token
 from dataBase import get_db_session
 import logging
 from utils.FCM import send_fcm_notification
-from models.models import Farm, UserRoleFarm, User, Role, Permission, RolePermission, Invitation, Notification
+from models.models import Farm, UserRoleFarm, User, Role, Permission, RolePermission, Invitation, Notification, UserFarmRoleState
 from utils.response import create_response
 from utils.response import session_token_invalid_response
 from utils.status import get_status
@@ -69,7 +69,7 @@ def create_invitation(invitation_data: InvitationCreate, session_token: str, db:
     user_role_farm = db.query(UserRoleFarm).filter(
         UserRoleFarm.user_id == user.user_id,
         UserRoleFarm.farm_id == invitation_data.farm_id,
-        UserRoleFarm.status_id == active_status.status_id  # Usar el estado "Activo"
+        UserRoleFarm.user_farm_role_status_id == active_status.user_farm_role_status_id  # Usar el estado "Activo"
     ).first()
 
     if not user_role_farm:
@@ -113,7 +113,7 @@ def create_invitation(invitation_data: InvitationCreate, session_token: str, db:
     existing_role_farm = db.query(UserRoleFarm).filter(
         UserRoleFarm.user_id == existing_user.user_id,
         UserRoleFarm.farm_id == invitation_data.farm_id,
-        UserRoleFarm.status_id == active_status.status_id
+        UserRoleFarm.user_farm_role_status_id == active_status.user_farm_role_status_id
     ).first()
 
     if existing_role_farm:
@@ -251,7 +251,7 @@ def respond_invitation(invitation_id: int, action: str, session_token: str, db: 
             user_id=user.user_id,
             farm_id=invitation.farm_id,
             role_id=suggested_role.role_id,  # Asignar el rol sugerido
-            status_id=active_status.status_id  # Estado "Activo" del tipo "user_role_farm"
+            user_farm_role_status_id=active_status.user_farm_role_status_id  # Estado "Activo" del tipo "user_role_farm"
         )
         db.add(new_user_role_farm)
         db.commit()
