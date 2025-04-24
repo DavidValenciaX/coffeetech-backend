@@ -7,7 +7,7 @@ import logging
 
 logger = logging.getLogger(__name__)
 
-def get_status(db: Session, status_name: str, entity_type: str):
+def get_state(db: Session, status_name: str, entity_type: str):
     """
     Obtiene el estado para diferentes entidades.
     

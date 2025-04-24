@@ -7,7 +7,7 @@ from dataBase import get_db_session
 import logging
 from utils.response import session_token_invalid_response
 from utils.response import create_response
-from utils.status import get_status
+from utils.status import get_state
 
 router = APIRouter()
 
@@ -60,18 +60,18 @@ def create_plot(request: CreatePlotRequest, session_token: str, db: Session = De
         return session_token_invalid_response()
 
     # Obtener los estados "Activo" para Farm y UserRoleFarm
-    active_farm_status = get_status(db, "Activo", "Farm")
+    active_farm_status = get_state(db, "Activo", "Farm")
     if not active_farm_status:
         logger.error("No se encontró el estado 'Activo' para el tipo 'Farm'")
         return create_response("error", "No se encontró el estado 'Activo' para el tipo 'Farm'", status_code=400)
 
-    active_urf_status = get_status(db, "Activo", "user_role_farm")
+    active_urf_status = get_state(db, "Activo", "user_role_farm")
     if not active_urf_status:
         logger.error("No se encontró el estado 'Activo' para el tipo 'user_role_farm'")
         return create_response("error", "No se encontró el estado 'Activo' para el tipo 'user_role_farm'", status_code=400)
 
     # Obtener el estado "Activo" para Plot
-    active_plot_status = get_status(db, "Activo", "Plot")
+    active_plot_status = get_state(db, "Activo", "Plot")
     if not active_plot_status:
         logger.error("No se encontró el estado 'Activo' para el tipo 'Plot'")
         return create_response("error", "No se encontró el estado 'Activo' para el tipo 'Plot'", status_code=400)
@@ -176,7 +176,7 @@ def update_plot_general_info(request: UpdatePlotGeneralInfoRequest, session_toke
         return session_token_invalid_response()
 
     # Obtener el estado "Activo" para Plot
-    active_plot_status = get_status(db, "Activo", "Plot")
+    active_plot_status = get_state(db, "Activo", "Plot")
     if not active_plot_status:
         logger.error("No se encontró el estado 'Activo' para el tipo 'Plot'")
         return create_response("error", "No se encontró el estado 'Activo' para el tipo 'Plot'", status_code=400)
@@ -194,7 +194,7 @@ def update_plot_general_info(request: UpdatePlotGeneralInfoRequest, session_toke
         return create_response("error", "La finca asociada al lote no existe")
 
     # Obtener el estado "Activo" para UserRoleFarm
-    active_urf_status = get_status(db, "Activo", "user_role_farm")
+    active_urf_status = get_state(db, "Activo", "user_role_farm")
     if not active_urf_status:
         logger.error("No se encontró el estado 'Activo' para el tipo 'user_role_farm'")
         return create_response("error", "No se encontró el estado 'Activo' para el tipo 'user_role_farm'", status_code=400)
@@ -281,7 +281,7 @@ def update_plot_location(request: UpdatePlotLocationRequest, session_token: str,
         return session_token_invalid_response()
 
     # Obtener el estado "Activo" para Plot
-    active_plot_status = get_status(db, "Activo", "Plot")
+    active_plot_status = get_state(db, "Activo", "Plot")
     if not active_plot_status:
         logger.error("No se encontró el estado 'Activo' para el tipo 'Plot'")
         return create_response("error", "No se encontró el estado 'Activo' para el tipo 'Plot'", status_code=400)
@@ -299,7 +299,7 @@ def update_plot_location(request: UpdatePlotLocationRequest, session_token: str,
         return create_response("error", "La finca asociada al lote no existe")
 
     # Obtener el estado "Activo" para UserRoleFarm
-    active_urf_status = get_status(db, "Activo", "user_role_farm")
+    active_urf_status = get_state(db, "Activo", "user_role_farm")
     if not active_urf_status:
         logger.error("No se encontró el estado 'Activo' para el tipo 'user_role_farm'")
         return create_response("error", "No se encontró el estado 'Activo' para el tipo 'user_role_farm'", status_code=400)
@@ -364,9 +364,9 @@ def list_plots(farm_id: int, session_token: str, db: Session = Depends(get_db_se
         return session_token_invalid_response()
 
     # Obtener los estados "Activo"
-    active_farm_status = get_status(db, "Activo", "Farm")
-    active_urf_status = get_status(db, "Activo", "user_role_farm")
-    active_plot_status = get_status(db, "Activo", "Plot")
+    active_farm_status = get_state(db, "Activo", "Farm")
+    active_urf_status = get_state(db, "Activo", "user_role_farm")
+    active_plot_status = get_state(db, "Activo", "Plot")
 
     # Verificar que la finca existe y está activa
     farm = db.query(Farm).filter(Farm.farm_id == farm_id, Farm.status_id == active_farm_status.status_id).first()
@@ -443,9 +443,9 @@ def get_plot(plot_id: int, session_token: str, db: Session = Depends(get_db_sess
         return session_token_invalid_response()
 
     # Obtener los estados "Activo"
-    active_plot_status = get_status(db, "Activo", "Plot")
-    active_farm_status = get_status(db, "Activo", "Farm")
-    active_urf_status = get_status(db, "Activo", "user_role_farm")
+    active_plot_status = get_state(db, "Activo", "Plot")
+    active_farm_status = get_state(db, "Activo", "Farm")
+    active_urf_status = get_state(db, "Activo", "user_role_farm")
 
     # Obtener el lote
     plot = db.query(Plot).filter(Plot.plot_id == plot_id, Plot.status_id == active_plot_status.status_id).first()
@@ -519,8 +519,8 @@ def delete_plot(plot_id: int, session_token: str, db: Session = Depends(get_db_s
         return create_response("error", "Token de sesión inválido o usuario no encontrado")
 
     # Obtener los estados "Activo" e "Inactivo" para Plot
-    active_plot_status = get_status(db, "Activo", "Plot")
-    inactive_plot_status = get_status(db, "Inactivo", "Plot")
+    active_plot_status = get_state(db, "Activo", "Plot")
+    inactive_plot_status = get_state(db, "Inactivo", "Plot")
 
     # Obtener el lote
     plot = db.query(Plot).filter(Plot.plot_id == plot_id, Plot.status_id == active_plot_status.status_id).first()
@@ -535,7 +535,7 @@ def delete_plot(plot_id: int, session_token: str, db: Session = Depends(get_db_s
         return create_response("error", "La finca asociada al lote no existe")
 
     # Obtener el estado "Activo" para UserRoleFarm
-    active_urf_status = get_status(db, "Activo", "user_role_farm")
+    active_urf_status = get_state(db, "Activo", "user_role_farm")
 
     # Verificar si el usuario tiene un rol en la finca
     user_role_farm = db.query(UserRoleFarm).filter(

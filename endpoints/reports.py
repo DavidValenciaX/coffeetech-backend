@@ -8,7 +8,7 @@ from dataBase import get_db_session
 import logging
 from typing import List, Optional
 from utils.response import create_response, session_token_invalid_response
-from utils.status import get_status
+from utils.status import get_state
 from pydantic import BaseModel, Field, conlist
 from datetime import date
 from fastapi.encoders import jsonable_encoder
@@ -124,7 +124,7 @@ def financial_report(
             return create_response("error", "La finca asociada a los lotes no existe", status_code=404)
         
         # 4. Verificar que el usuario esté asociado con esta finca y tenga permisos
-        active_urf_status = get_status(db, "Activo", "user_role_farm")
+        active_urf_status = get_state(db, "Activo", "user_role_farm")
         if not active_urf_status:
             logger.error("Estado 'Activo' para user_role_farm no encontrado")
             return create_response("error", "Estado 'Activo' para user_role_farm no encontrado", status_code=500)
@@ -150,7 +150,7 @@ def financial_report(
             return create_response("error", "No tienes permiso para ver reportes financieros", status_code=403)
         
         # 5. Obtener el estado 'Activo' para Transaction
-        active_transaction_status = get_status(db, "Activo", "Transaction")
+        active_transaction_status = get_state(db, "Activo", "Transaction")
         if not active_transaction_status:
             logger.error("Estado 'Activo' para Transaction no encontrado")
             return create_response("error", "Estado 'Activo' para Transaction no encontrado", status_code=500)

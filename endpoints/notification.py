@@ -63,13 +63,13 @@ def get_notifications(session_token: str, db: Session = Depends(get_db_session))
     # Mostrar las notificaciones obtenidas antes de serializarlas
     for notification in notifications:
         logger.debug(f"Notificación obtenida: {notification}")
-        logger.debug(f"Notificación ID: {notification.notifications_id}, Status ID: {notification.status_id}")
+        logger.debug(f"Notificación ID: {notification.notifications_id}, State ID: {notification.notification_state_id}")
 
         # Verificar si la relación 'status' está cargada y no es None
-        if notification.status is None:
-            logger.warning(f"La notificación con ID {notification.notifications_id} no tiene 'status'.")
+        if notification.state is None:
+            logger.warning(f"La notificación con ID {notification.notifications_id} no tiene 'state'.")
         else:
-            logger.debug(f"Status: {notification.status.name}")
+            logger.debug(f"State: {notification.state.name}")
 
     # Convertir las notificaciones a un formato que Pydantic pueda manejar
     try:
@@ -81,7 +81,7 @@ def get_notifications(session_token: str, db: Session = Depends(get_db_session))
                 notification_type=notification.notification_type.name if notification.notification_type else None,
                 invitation_id=notification.invitation_id,
                 farm_id=notification.farm_id,
-                status=notification.status.name if notification.status else None
+                status=notification.state.name if notification.state else None
             )
             for notification in notifications
         ]

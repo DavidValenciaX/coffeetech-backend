@@ -14,12 +14,12 @@ class Farm(Base):
     name = Column(String(255), nullable=False)
     area = Column(Numeric(10, 2), nullable=False)
     area_unit_id = Column(Integer, ForeignKey('area_units.area_unit_id'), nullable=False)
-    farm_status_id = Column(Integer, ForeignKey('farm_states.farm_status_id'), nullable=False)
+    farm_state_id = Column(Integer, ForeignKey('farm_states.farm_state_id'), nullable=False)
     __table_args__ = (CheckConstraint('area > 0', name='check_area_positive'),)
 
     # Relaciones
     area_unit = relationship("AreaUnit")
-    status = relationship("FarmState")
+    state = relationship("FarmState")
     invitations = relationship("Invitation", back_populates="farm")
     user_roles_farms = relationship('UserRoleFarm', back_populates='farm')
     plots = relationship("Plot", back_populates="farm")
@@ -34,14 +34,14 @@ class UserRoleFarm(Base):
     role_id = Column(Integer, ForeignKey('roles.role_id'), nullable=False)
     user_id = Column(Integer, ForeignKey('users.user_id'), nullable=False)
     farm_id = Column(Integer, ForeignKey('farms.farm_id'), nullable=False)
-    user_farm_role_status_id = Column(Integer, ForeignKey('user_farm_role_states.user_farm_role_status_id'), nullable=False)
+    user_farm_role_state_id = Column(Integer, ForeignKey('user_farm_role_states.user_farm_role_state_id'), nullable=False)
     __table_args__ = (UniqueConstraint('user_id', 'role_id', 'farm_id'),)
 
     # Relaciones
     user = relationship('User', back_populates='user_roles_farms')
     farm = relationship('Farm', back_populates='user_roles_farms')
     role = relationship('Role', back_populates='user_roles_farms')
-    status = relationship('UserFarmRoleState')
+    state = relationship('UserFarmRoleState')
 
 
 # Modelo para Role
@@ -69,50 +69,50 @@ class AreaUnit(Base):
 # Definición del modelo para diversos estados
 class UserState(Base):
     __tablename__ = 'user_states'
-    user_status_id = Column(Integer, primary_key=True)
+    user_state_id = Column(Integer, primary_key=True)
     name = Column(String(45), nullable=False, unique=True)
-    users = relationship("User", back_populates="status")
+    users = relationship("User", back_populates="state")
 
 
 class FarmState(Base):
     __tablename__ = 'farm_states'
-    farm_status_id = Column(Integer, primary_key=True)
+    farm_state_id = Column(Integer, primary_key=True)
     name = Column(String(45), nullable=False, unique=True)
-    farms = relationship("Farm", back_populates="status")
+    farms = relationship("Farm", back_populates="state")
 
 
 class PlotState(Base):
     __tablename__ = 'plot_states'
-    plot_status_id = Column(Integer, primary_key=True)
+    plot_state_id = Column(Integer, primary_key=True)
     name = Column(String(45), nullable=False, unique=True)
-    plots = relationship("Plot", back_populates="status")
+    plots = relationship("Plot", back_populates="state")
 
 
 class NotificationState(Base):
     __tablename__ = 'notification_states'
-    notification_status_id = Column(Integer, primary_key=True)
+    notification_state_id = Column(Integer, primary_key=True)
     name = Column(String(45), nullable=False, unique=True)
-    notifications = relationship("Notification", back_populates="status")
+    notifications = relationship("Notification", back_populates="state")
 
 
 class UserFarmRoleState(Base):
     __tablename__ = 'user_farm_role_states'
-    user_farm_role_status_id = Column(Integer, primary_key=True)
+    user_farm_role_state_id = Column(Integer, primary_key=True)
     name = Column(String(45), nullable=False, unique=True)
 
 
 class TransactionState(Base):
     __tablename__ = 'transaction_states'
-    transaction_status_id = Column(Integer, primary_key=True)
+    transaction_state_id = Column(Integer, primary_key=True)
     name = Column(String(45), nullable=False, unique=True)
-    transactions = relationship("Transaction", back_populates="status")
+    transactions = relationship("Transaction", back_populates="state")
 
 
 class InvitationState(Base):
     __tablename__ = 'invitation_states'
-    invitation_status_id = Column(Integer, primary_key=True)
+    invitation_state_id = Column(Integer, primary_key=True)
     name = Column(String(45), nullable=False, unique=True)
-    invitations = relationship("Invitation", back_populates="status")
+    invitations = relationship("Invitation", back_populates="state")
 
 
 # Definición del modelo User
@@ -126,10 +126,10 @@ class User(Base):
     verification_token = Column(String(255), nullable=True, unique=True)
     session_token = Column(String(255), nullable=True, unique=True)
     fcm_token = Column(String(255), nullable=True)
-    user_status_id = Column(Integer, ForeignKey("user_states.user_status_id"), nullable=False)
+    user_state_id = Column(Integer, ForeignKey("user_states.user_state_id"), nullable=False)
 
     # Relaciones
-    status = relationship("UserState", back_populates="users")
+    state = relationship("UserState", back_populates="users")
     user_roles_farms = relationship('UserRoleFarm', back_populates='user')
     notifications = relationship("Notification", back_populates="user")
     created_transactions = relationship("Transaction", back_populates="creator")
@@ -168,14 +168,14 @@ class Invitation(Base):
     invitation_id = Column(Integer, primary_key=True)
     email = Column(String(150), nullable=False)
     suggested_role_id = Column(Integer, ForeignKey('roles.role_id'), nullable=False)
-    invitation_status_id = Column(Integer, ForeignKey('invitation_states.invitation_status_id'), nullable=False)
+    invitation_state_id = Column(Integer, ForeignKey('invitation_states.invitation_state_id'), nullable=False)
     farm_id = Column(Integer, ForeignKey('farms.farm_id'), nullable=False)
     inviter_user_id = Column(Integer, ForeignKey('users.user_id'), nullable=False)
     invitation_date = Column(DateTime(timezone=True), nullable=False, server_default=func.now())
 
     # Relaciones
     farm = relationship("Farm", back_populates="invitations")
-    status = relationship('InvitationState', back_populates="invitations")
+    state = relationship('InvitationState', back_populates="invitations")
     inviter = relationship("User", foreign_keys=[inviter_user_id], back_populates="created_invitations")
     notifications = relationship("Notification", back_populates="invitation")
     suggested_role = relationship('Role', back_populates="invitations")
@@ -202,7 +202,7 @@ class Notification(Base):
     user_id = Column(Integer, ForeignKey('users.user_id'), nullable=False)
     invitation_id = Column(Integer, ForeignKey('invitations.invitation_id'), nullable=True)
     notification_type_id = Column(Integer, ForeignKey('notification_types.notification_type_id'), nullable=False)
-    notification_status_id = Column(Integer, ForeignKey('notification_states.notification_status_id'), nullable=False)
+    notification_state_id = Column(Integer, ForeignKey('notification_states.notification_state_id'), nullable=False)
     farm_id = Column(Integer, ForeignKey('farms.farm_id'), nullable=True)
 
     # Relaciones
@@ -210,7 +210,7 @@ class Notification(Base):
     invitation = relationship("Invitation", back_populates="notifications")
     farm = relationship("Farm", back_populates="notifications")
     notification_type = relationship("NotificationType", back_populates="notifications")
-    status = relationship("NotificationState", back_populates="notifications")
+    state = relationship("NotificationState", back_populates="notifications")
 
 
 # Modelo para Plot
@@ -233,12 +233,12 @@ class Plot(Base):
     farm_id = Column(Integer, ForeignKey('farms.farm_id'), nullable=False)
     area = Column(Numeric(10, 2), nullable=False)
     area_unit_id = Column(Integer, ForeignKey('area_units.area_unit_id'), nullable=False)
-    plot_status_id = Column(Integer, ForeignKey('plot_states.plot_status_id'), nullable=False)
+    plot_state_id = Column(Integer, ForeignKey('plot_states.plot_state_id'), nullable=False)
 
     # Relaciones
     farm = relationship("Farm", back_populates="plots")
     coffee_variety = relationship("CoffeeVariety", back_populates="plots")
-    status = relationship("PlotState", back_populates="plots")
+    state = relationship("PlotState", back_populates="plots")
     area_unit = relationship("AreaUnit")
     transactions = relationship("Transaction", back_populates="plot")
 
@@ -287,7 +287,7 @@ class Transaction(Base):
     plot_id = Column(Integer, ForeignKey('plots.plot_id'), nullable=False)
     description = Column(String(255), nullable=True)
     transaction_date = Column(Date, nullable=False)
-    transaction_status_id = Column(Integer, ForeignKey('transaction_states.transaction_status_id'), nullable=False)
+    transaction_state_id = Column(Integer, ForeignKey('transaction_states.transaction_state_id'), nullable=False)
     value = Column(Numeric(15, 2), nullable=False)
     transaction_category_id = Column(Integer, ForeignKey('transaction_categories.transaction_category_id'), nullable=False)
     creator_id = Column(Integer, ForeignKey('users.user_id'), nullable=False)
@@ -295,5 +295,5 @@ class Transaction(Base):
     # Relaciones
     plot = relationship("Plot", back_populates="transactions")
     transaction_category = relationship("TransactionCategory", back_populates="transactions")
-    status = relationship("TransactionState", back_populates="transactions")
+    state = relationship("TransactionState", back_populates="transactions")
     creator = relationship("User", back_populates="created_transactions")

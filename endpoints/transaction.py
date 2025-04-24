@@ -9,7 +9,7 @@ from dataBase import get_db_session
 import logging
 from typing import Optional
 from utils.response import session_token_invalid_response, create_response
-from utils.status import get_status
+from utils.status import get_state
 from datetime import date
 import pytz
 from fastapi.encoders import jsonable_encoder
@@ -85,7 +85,7 @@ def create_transaction(
         return session_token_invalid_response()
     
     # 3. Verificar que el usuario tenga permiso 'add_transaction'
-    active_urf_status = get_status(db, "Activo", "user_role_farm")
+    active_urf_status = get_state(db, "Activo", "user_role_farm")
     if not active_urf_status:
         logger.error("Estado 'Activo' para user_role_farm no encontrado")
         return create_response("error", "Estado 'Activo' para user_role_farm no encontrado", status_code=400)
@@ -110,7 +110,7 @@ def create_transaction(
         return create_response("error", "No tienes permiso para agregar transacciones", status_code=403)
     
     # 4. Verificar que el lote existe y está activo
-    active_plot_status = get_status(db, "Activo", "Plot")
+    active_plot_status = get_state(db, "Activo", "Plot")
     if not active_plot_status:
         logger.error("Estado 'Activo' para Plot no encontrado")
         return create_response("error", "Estado 'Activo' para Plot no encontrado", status_code=500)
@@ -147,7 +147,7 @@ def create_transaction(
     
     
     # 9. Obtener el estado 'Activo' para Transaction
-    active_status = get_status(db, "Activo", "Transaction")
+    active_status = get_state(db, "Activo", "Transaction")
     if not active_status:
         logger.error("Estado 'Activo' para Transaction no encontrado")
         return create_response("error", "Estado 'Activo' para Transaction no encontrado", status_code=500)
@@ -226,7 +226,7 @@ def edit_transaction(
         return create_response("error", "La transacción especificada no existe", status_code=404)
     
     # 4. Verificar que la transacción no esté inactiva
-    inactive_status = get_status(db, "Inactivo", "Transaction")
+    inactive_status = get_state(db, "Inactivo", "Transaction")
     if not inactive_status:
         logger.error("Estado 'Inactivo' para Transaction no encontrado")
         return create_response("error", "Estado 'Inactivo' para Transaction no encontrado", status_code=500)
@@ -236,7 +236,7 @@ def edit_transaction(
         return create_response("error", "La transacción está inactiva y no puede ser modificada", status_code=403)
  
     # 5. Verificar que el usuario esté asociado con la finca del lote de la transacción
-    active_urf_status = get_status(db, "Activo", "user_role_farm")
+    active_urf_status = get_state(db, "Activo", "user_role_farm")
     if not active_urf_status:
         logger.error("Estado 'Activo' para user_role_farm no encontrado")
         return create_response("error", "Estado 'Activo' para user_role_farm no encontrado", status_code=400)
@@ -306,7 +306,7 @@ def edit_transaction(
         db.refresh(transaction)
         
         # Obtener el estado actual
-        status = get_status(db, None, "Transaction", transaction.status_id) # Assuming get_status can fetch by ID
+        status = get_state(db, None, "Transaction", transaction.status_id) # Assuming get_state can fetch by ID
         status_name = status.name if status else "Desconocido"
         
         # Obtener el tipo de transacción actualizado
@@ -370,7 +370,7 @@ def delete_transaction(
         return create_response("error", "La transacción especificada no existe", status_code=404)
     
     # 4. Verificar que la transacción no esté ya inactiva
-    inactive_status = get_status(db, "Inactivo", "Transaction")
+    inactive_status = get_state(db, "Inactivo", "Transaction")
     if not inactive_status:
         logger.error("Estado 'Inactivo' para Transaction no encontrado")
         return create_response("error", "Estado 'Inactivo' para Transaction no encontrado", status_code=500)
@@ -380,7 +380,7 @@ def delete_transaction(
         return create_response("error", "La transacción ya está eliminada", status_code=400)
     
     # 5. Verificar que el usuario esté asociado con la finca del lote de la transacción
-    active_urf_status = get_status(db, "Activo", "user_role_farm")
+    active_urf_status = get_state(db, "Activo", "user_role_farm")
     if not active_urf_status:
         logger.error("Estado 'Activo' para user_role_farm no encontrado")
         return create_response("error", "Estado 'Activo' para user_role_farm no encontrado", status_code=400)
@@ -442,7 +442,7 @@ def read_transactions(
         return session_token_invalid_response()
     
     # 3. Verificar que el lote exista y esté activo
-    active_plot_status = get_status(db, "Activo", "Plot")
+    active_plot_status = get_state(db, "Activo", "Plot")
     if not active_plot_status:
         logger.error("Estado 'Activo' para Plot no encontrado")
         return create_response("error", "Estado 'Activo' para Plot no encontrado", status_code=400)
@@ -461,7 +461,7 @@ def read_transactions(
         logger.warning("La finca asociada al lote no existe")
         return create_response("error", "La finca asociada al lote no existe", status_code=404)
     
-    active_urf_status = get_status(db, "Activo", "user_role_farm")
+    active_urf_status = get_state(db, "Activo", "user_role_farm")
     if not active_urf_status:
         logger.error("Estado 'Activo' para user_role_farm no encontrado")
         return create_response("error", "Estado 'Activo' para user_role_farm no encontrado", status_code=400)
@@ -486,7 +486,7 @@ def read_transactions(
         return create_response("error", "No tienes permiso para ver las transacciones en esta finca", status_code=403)
     
     # 6. Obtener el estado "Inactivo" para Transaction
-    inactive_transaction_status = get_status(db, "Inactivo", "Transaction")
+    inactive_transaction_status = get_state(db, "Inactivo", "Transaction")
     if not inactive_transaction_status:
         logger.error("Estado 'Inactivo' para Transaction no encontrado")
         return create_response("error", "Estado 'Inactivo' para Transaction no encontrado", status_code=500)

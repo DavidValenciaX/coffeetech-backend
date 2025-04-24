@@ -11,7 +11,7 @@ from utils.response import create_response
 from dataBase import get_db_session
 import datetime
 import logging
-from utils.status import get_status
+from utils.status import get_state
 import pytz
 
 bogota_tz = pytz.timezone("America/Bogota")
@@ -123,8 +123,8 @@ def register_user(user: UserCreate, db: Session = Depends(get_db_session)):
         password_hash = hash_password(user.password)
         verification_token = generate_verification_token(4)
 
-         # Usar get_status para obtener el estado "No Verificado" del tipo "User"
-        status_record = get_status(db, "No Verificado", "User")
+         # Usar get_state para obtener el estado "No Verificado" del tipo "User"
+        status_record = get_state(db, "No Verificado", "User")
         if not status_record:
             return create_response("error", "No se encontró el estado 'No Verificado' para el tipo 'User'", status_code=400)
 
@@ -134,7 +134,7 @@ def register_user(user: UserCreate, db: Session = Depends(get_db_session)):
             email=user.email,
             password_hash=password_hash,
             verification_token=verification_token,
-            status_id=status_record.status_id  # Asignamos el status_id dinámicamente
+            user_state_id=status_record.user_state_id  # Asignamos el user_state_id dinámicamente
         )
 
         db.add(new_user)
@@ -163,14 +163,14 @@ def verify_email(request: VerifyTokenRequest, db: Session = Depends(get_db_sessi
         return create_response("error", "Token inválido")
     
     try:
-        # Usar get_status para obtener el estado "Verificado" del tipo "User"
-        status_verified = get_status(db, "Verificado", "User")
+        # Usar get_state para obtener el estado "Verificado" del tipo "User"
+        status_verified = get_state(db, "Verificado", "User")
         if not status_verified:
             return create_response("error", "No se encontró el estado 'Verificado' para el tipo 'User'", status_code=400)
 
-        # Actualizar el usuario: marcar como verificado y cambiar el status_id
+        # Actualizar el usuario: marcar como verificado y cambiar el user_state_id
         user.verification_token = None
-        user.status_id = status_verified.status_id
+        user.user_state_id = status_verified.user_state_id
         
         # Guardar los cambios en la base de datos
         db.commit()
@@ -458,7 +458,7 @@ Este endpoint permite a los usuarios autenticarse mediante correo electrónico y
     if not user or not verify_password(request.password, user.password_hash):
         return create_response("error", "Credenciales incorrectas")
 
-    status_verified = get_status(db, "Verificado", "User")
+    status_verified = get_state(db, "Verificado", "User")
     if not status_verified or user.status_id != status_verified.status_id:
         new_verification_token = generate_verification_token(4)
         user.verification_token = new_verification_token
