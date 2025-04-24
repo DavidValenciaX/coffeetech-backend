@@ -1,4 +1,5 @@
-from sqlalchemy import Column, Integer,BigInteger, String, Numeric, ForeignKey, DateTime, Date, Sequence
+from sqlalchemy import Column, Integer, BigInteger, String, Numeric, ForeignKey, DateTime, Date, Sequence, UniqueConstraint, CheckConstraint
+from sqlalchemy.sql import func
 from sqlalchemy.orm import relationship
 from sqlalchemy.ext.declarative import declarative_base
 from datetime import datetime
@@ -6,261 +7,142 @@ import pytz
 
 Base = declarative_base()
 
-def get_colombia_time():
-    colombia_tz = pytz.timezone("America/Bogota")
-    return datetime.now(colombia_tz)
-
-# Modelo para Farm (Finca)
-
 class Farm(Base):
-    """
-    Modelo de base de datos para representar una finca.
+    __tablename__ = 'farms'
 
-    Atributos:
-    ----------
-    farm_id : int
-        Identificador único de la finca (clave primaria).
-    name : str
-        Nombre de la finca.
-    area : Numeric
-        Área de la finca.
-    area_unit_id : int
-        Unidad de medida del área (relación con UnitOfMeasure).
-    status_id : int
-        Estado actual de la finca (relación con Status).
-    """
-    __tablename__ = 'farm'
-
-    farm_id = Column(Integer, primary_key=True, index=True, server_default=Sequence('farm_farm_id_seq').next_value())
-    name = Column(String(100), nullable=False)
+    farm_id = Column(Integer, primary_key=True, index=True)
+    name = Column(String(255), nullable=False)
     area = Column(Numeric(10, 2), nullable=False)
-    area_unit_id = Column(Integer, ForeignKey('unit_of_measure.unit_of_measure_id'), nullable=False)
-    status_id = Column(Integer, ForeignKey('status.status_id'), nullable=False)
+    area_unit_id = Column(Integer, ForeignKey('area_units.area_unit_id'), nullable=False)
+    farm_status_id = Column(Integer, ForeignKey('farm_states.farm_status_id'), nullable=False)
+    __table_args__ = (CheckConstraint('area > 0', name='check_area_positive'),)
 
     # Relaciones
-    area_unit = relationship("UnitOfMeasure")
-    status = relationship("Status")
+    area_unit = relationship("AreaUnit")
+    status = relationship("FarmState")
     invitations = relationship("Invitation", back_populates="farm")
     user_roles_farms = relationship('UserRoleFarm', back_populates='farm')
     plots = relationship("Plot", back_populates="farm")
+    notifications = relationship("Notification", back_populates="farm")
 
 
 # Modelo para UserRoleFarm (relación entre usuarios, roles y fincas)
 class UserRoleFarm(Base):
-    """
-    Relación entre usuarios, roles y fincas.
-
-    Atributos:
-    ----------
-    user_role_farm_id : int
-        Identificador único de la relación.
-    role_id : int
-        Identificador del rol (relación con Role).
-    user_id : int
-        Identificador del usuario (relación con User).
-    farm_id : int
-        Identificador de la finca (relación con Farm).
-    status_id : int
-        Estado actual de la relación.
-    """
     __tablename__ = 'user_role_farm'
 
-    user_role_farm_id = Column(Integer, primary_key=True, server_default=Sequence('user_role_farm_user_role_farm_id_seq').next_value())
-    role_id = Column(Integer, ForeignKey('role.role_id'), nullable=False)
+    user_role_farm_id = Column(Integer, primary_key=True)
+    role_id = Column(Integer, ForeignKey('roles.role_id'), nullable=False)
     user_id = Column(Integer, ForeignKey('users.user_id'), nullable=False)
-    farm_id = Column(Integer, ForeignKey('farm.farm_id'), nullable=False)
-    status_id = Column(Integer, ForeignKey('status.status_id'), nullable=False, default=22)
+    farm_id = Column(Integer, ForeignKey('farms.farm_id'), nullable=False)
+    user_farm_role_status_id = Column(Integer, ForeignKey('user_farm_role_states.user_farm_role_status_id'), nullable=False)
+    __table_args__ = (UniqueConstraint('user_id', 'role_id', 'farm_id'),)
 
     # Relaciones
     user = relationship('User', back_populates='user_roles_farms')
     farm = relationship('Farm', back_populates='user_roles_farms')
     role = relationship('Role', back_populates='user_roles_farms')
-    status = relationship('Status')
+    status = relationship('UserFarmRoleState')
 
 
 # Modelo para Role
 class Role(Base):
-    """
-    Representa un rol que un usuario puede tener.
+    __tablename__ = 'roles'
 
-    Atributos:
-    ----------
-    role_id : int
-        Identificador único del rol.
-    name : str
-        Nombre del rol (único).
-    """
-    __tablename__ = 'role'
-
-    role_id = Column(Integer, primary_key=True, server_default=Sequence('role_role_id_seq').next_value())
-    name = Column(String(50), nullable=False, unique=True)
+    role_id = Column(Integer, primary_key=True)
+    name = Column(String(255), nullable=False, unique=True)
 
     # Relación con RolePermission
     permissions = relationship("RolePermission", back_populates="role")
     user_roles_farms = relationship('UserRoleFarm', back_populates='role')
+    invitations = relationship("Invitation", back_populates="suggested_role")
 
 
-# Modelo para UnitOfMeasureType
-class UnitOfMeasureType(Base):
-    """
-    Tipo de unidad de medida (ejemplo: área, volumen).
+# Modelo para AreaUnit (antes UnitOfMeasure)
+class AreaUnit(Base):
+    __tablename__ = 'area_units'
 
-    Atributos:
-    ----------
-    unit_of_measure_type_id : int
-        Identificador único del tipo de unidad.
-    name : str
-        Nombre del tipo de unidad.
-    """
-    __tablename__ = 'unit_of_measure_type'
-
-    unit_of_measure_type_id = Column(Integer, primary_key=True, server_default=Sequence('unit_of_measure_type_unit_of_measure_type_id_seq').next_value())
-    name = Column(String(50), nullable=False)
-
-    # Relación con UnitOfMeasure
-    units_of_measure = relationship("UnitOfMeasure", back_populates="unit_of_measure_type")
+    area_unit_id = Column(Integer, primary_key=True)
+    name = Column(String(255), nullable=False, unique=True)
+    abbreviation = Column(String(10), nullable=False, unique=True)
 
 
-# Modelo para UnitOfMeasure
-class UnitOfMeasure(Base):
-    """
-    Representa una unidad de medida (ejemplo: hectáreas, metros).
-
-    Atributos:
-    ----------
-    unit_of_measure_id : int
-        Identificador único de la unidad de medida.
-    name : str
-        Nombre de la unidad de medida.
-    abbreviation : str
-        Abreviación de la unidad de medida.
-    unit_of_measure_type_id : int
-        Relación con el tipo de unidad de medida.
-    """
-    __tablename__ = 'unit_of_measure'
-
-    unit_of_measure_id = Column(Integer, primary_key=True, server_default=Sequence('unit_of_measure_unit_of_measure_id_seq').next_value())
-    name = Column(String(50), nullable=False)
-    abbreviation = Column(String(10), nullable=False)
-    unit_of_measure_type_id = Column(Integer, ForeignKey('unit_of_measure_type.unit_of_measure_type_id'), nullable=False)
-
-    # Relación con UnitOfMeasureType
-    unit_of_measure_type = relationship("UnitOfMeasureType", back_populates="units_of_measure")
-
-
-# Definición del modelo StatusType
-class StatusType(Base):
-    """
-    Representa los tipos de estado de los registros.
-
-    Atributos:
-    ----------
-    status_type_id : int
-        Identificador único del tipo de estado.
-    name : str
-        Nombre del tipo de estado.
-    """
-    __tablename__ = 'status_type'
-
-    status_type_id = Column(Integer, primary_key=True, server_default=Sequence('status_type_status_type_id_seq').next_value())
-    name = Column(String(50), nullable=False)
-
-    # Relación con Status
-    statuses = relationship("Status", back_populates="status_type")
-
-
-# Definición del modelo Status
-class Status(Base):
-    """
-    Representa un estado de un registro (ejemplo: activo, inactivo).
-
-    Atributos:
-    ----------
-    status_id : int
-        Identificador único del estado.
-    name : str
-        Nombre del estado.
-    status_type_id : int
-        Relación con el tipo de estado.
-    """
-    __tablename__ = "status"
-
-    status_id = Column(Integer, primary_key=True, server_default=Sequence('status_status_id_seq').next_value())
-    name = Column(String(45), nullable=False)
-    status_type_id = Column(Integer, ForeignKey("status_type.status_type_id"), nullable=False)
-
-    # Relación con StatusType
-    status_type = relationship("StatusType", back_populates="statuses")
-
-    # Relación con User
+# Definición del modelo para diversos estados
+class UserState(Base):
+    __tablename__ = 'user_states'
+    user_status_id = Column(Integer, primary_key=True)
+    name = Column(String(45), nullable=False, unique=True)
     users = relationship("User", back_populates="status")
-    
-    # Relación con Notification
+
+
+class FarmState(Base):
+    __tablename__ = 'farm_states'
+    farm_status_id = Column(Integer, primary_key=True)
+    name = Column(String(45), nullable=False, unique=True)
+    farms = relationship("Farm", back_populates="status")
+
+
+class PlotState(Base):
+    __tablename__ = 'plot_states'
+    plot_status_id = Column(Integer, primary_key=True)
+    name = Column(String(45), nullable=False, unique=True)
+    plots = relationship("Plot", back_populates="status")
+
+
+class NotificationState(Base):
+    __tablename__ = 'notification_states'
+    notification_status_id = Column(Integer, primary_key=True)
+    name = Column(String(45), nullable=False, unique=True)
     notifications = relationship("Notification", back_populates="status")
 
+
+class UserFarmRoleState(Base):
+    __tablename__ = 'user_farm_role_states'
+    user_farm_role_status_id = Column(Integer, primary_key=True)
+    name = Column(String(45), nullable=False, unique=True)
+
+
+class TransactionState(Base):
+    __tablename__ = 'transaction_states'
+    transaction_status_id = Column(Integer, primary_key=True)
+    name = Column(String(45), nullable=False, unique=True)
+    transactions = relationship("Transaction", back_populates="status")
+
+
+class InvitationState(Base):
+    __tablename__ = 'invitation_states'
+    invitation_status_id = Column(Integer, primary_key=True)
+    name = Column(String(45), nullable=False, unique=True)
+    invitations = relationship("Invitation", back_populates="status")
 
 
 # Definición del modelo User
 class User(Base):
-    """
-    Representa un usuario en el sistema.
-
-    Atributos:
-    ----------
-    user_id : int
-        Identificador único del usuario.
-    name : str
-        Nombre del usuario.
-    email : str
-        Correo electrónico del usuario.
-    password_hash : str
-        Hash de la contraseña del usuario.
-    verification_token : str
-        Token de verificación del usuario.
-    session_token : str
-        Token de sesión del usuario.
-    fcm_token : str
-        Token de Firebase Cloud Messaging del usuario.
-    status_id : int
-        Relación con el estado del usuario.
-    """
     __tablename__ = "users"
 
-    user_id = Column(Integer, primary_key=True, index=True, server_default=Sequence('users_user_id_seq').next_value())
-    name = Column(String(100), nullable=False)
+    user_id = Column(Integer, primary_key=True, index=True)
+    name = Column(String(255), nullable=False)
     email = Column(String(150), nullable=False, unique=True)
     password_hash = Column(String(255), nullable=False)
-    verification_token = Column(String(255), nullable=True)
-    session_token = Column(String(50), nullable=True)
+    verification_token = Column(String(255), nullable=True, unique=True)
+    session_token = Column(String(255), nullable=True, unique=True)
     fcm_token = Column(String(255), nullable=True)
-    status_id = Column(Integer, ForeignKey("status.status_id"), nullable=False)
+    user_status_id = Column(Integer, ForeignKey("user_states.user_status_id"), nullable=False)
 
     # Relaciones
-    status = relationship("Status", back_populates="users")
+    status = relationship("UserState", back_populates="users")
     user_roles_farms = relationship('UserRoleFarm', back_populates='user')
-    notifications = relationship("Notification", foreign_keys="[Notification.user_id]", back_populates="user")
+    notifications = relationship("Notification", back_populates="user")
+    created_transactions = relationship("Transaction", back_populates="creator")
+    created_invitations = relationship("Invitation", foreign_keys="[Invitation.inviter_user_id]", back_populates="inviter")
 
 
 # Modelo para Permission
 class Permission(Base):
-    """
-    Representa un permiso en el sistema.
+    __tablename__ = 'permissions'
 
-    Atributos:
-    ----------
-    permission_id : int
-        Identificador único del permiso.
-    description : str
-        Descripción del permiso.
-    name : str
-        Nombre del permiso.
-    """
-
-    __tablename__ = 'permission'
-
-    permission_id = Column(Integer, primary_key=True, index=True, server_default=Sequence('permission_permission_id_seq').next_value())
+    permission_id = Column(Integer, primary_key=True, index=True)
     description = Column(String(200), nullable=False)
-    name = Column(String(50), nullable=True, unique=True)
+    name = Column(String(255), nullable=False, unique=True)
 
     # Relación con RolePermission
     roles = relationship("RolePermission", back_populates="permission")
@@ -268,20 +150,10 @@ class Permission(Base):
 
 # Modelo para RolePermission
 class RolePermission(Base):
-    """
-    Representa la relación entre roles y permisos.
-
-    Atributos:
-    ----------
-    role_id : int
-        Identificador del rol.
-    permission_id : int
-        Identificador del permiso.
-    """
     __tablename__ = 'role_permission'
 
-    role_id = Column(Integer, ForeignKey('role.role_id'), primary_key=True, nullable=False)
-    permission_id = Column(Integer, ForeignKey('permission.permission_id'), primary_key=True, nullable=False)
+    role_id = Column(Integer, ForeignKey('roles.role_id'), primary_key=True, nullable=False)
+    permission_id = Column(Integer, ForeignKey('permissions.permission_id'), primary_key=True, nullable=False)
 
     # Relaciones con Role y Permission
     role = relationship("Role", back_populates="permissions")
@@ -290,59 +162,31 @@ class RolePermission(Base):
 
 # Modelo para Invitation
 class Invitation(Base):
-    """
-    Representa una invitación para un usuario.
+    __tablename__ = 'invitations'
+    __table_args__ = (UniqueConstraint('email', 'farm_id'),)
 
-    Atributos:
-    ----------
-    invitation_id : int
-        Identificador único de la invitación.
-    email : str
-        Correo electrónico del invitado.
-    suggested_role : str
-        Rol sugerido para el invitado.
-    status_id : int
-        Relación con el estado de la invitación.
-    farm_id : int
-        Relación con la finca a la que se invita.
-    inviter_user_id : int
-        Identificador del usuario que envía la invitación.
-    date : datetime
-        Fecha de creación de la invitación.
-    """
-    __tablename__ = 'invitation'
-
-    invitation_id = Column(Integer, primary_key=True, server_default=Sequence('invitation_invitation_id_seq').next_value())
+    invitation_id = Column(Integer, primary_key=True)
     email = Column(String(150), nullable=False)
-    suggested_role = Column(String(50), nullable=False)
-    status_id = Column(Integer, ForeignKey('status.status_id'), nullable=False, default=24)
-    farm_id = Column(Integer, ForeignKey('farm.farm_id'), nullable=False)
+    suggested_role_id = Column(Integer, ForeignKey('roles.role_id'), nullable=False)
+    invitation_status_id = Column(Integer, ForeignKey('invitation_states.invitation_status_id'), nullable=False)
+    farm_id = Column(Integer, ForeignKey('farms.farm_id'), nullable=False)
     inviter_user_id = Column(Integer, ForeignKey('users.user_id'), nullable=False)
-    date = Column(DateTime, default=datetime.utcnow, nullable=False)
+    invitation_date = Column(DateTime(timezone=True), nullable=False, server_default=func.now())
 
     # Relaciones
     farm = relationship("Farm", back_populates="invitations")
-    status = relationship("Status")
-    inviter = relationship("User", foreign_keys=[inviter_user_id])
+    status = relationship('InvitationState', back_populates="invitations")
+    inviter = relationship("User", foreign_keys=[inviter_user_id], back_populates="created_invitations")
     notifications = relationship("Notification", back_populates="invitation")
+    suggested_role = relationship('Role', back_populates="invitations")
 
 
 # Modelo para NotificationType
 class NotificationType(Base):
-    """
-    Representa el tipo de notificación.
+    __tablename__ = 'notification_types'
 
-    Atributos:
-    ----------
-    notification_type_id : int
-        Identificador único del tipo de notificación.
-    name : str
-        Nombre del tipo de notificación.
-    """
-    __tablename__ = 'notification_type'
-
-    notification_type_id = Column(Integer, primary_key=True, server_default=Sequence('notification_type_notification_type_id_seq').next_value())
-    name = Column(String(50), nullable=False)
+    notification_type_id = Column(Integer, primary_key=True)
+    name = Column(String(255), nullable=False, unique=True)
 
     # Relación con Notification
     notifications = relationship("Notification", back_populates="notification_type")
@@ -350,196 +194,106 @@ class NotificationType(Base):
 
 # Modelo para Notification
 class Notification(Base):
-    """
-    Representa una notificación en el sistema.
-
-    Atributos:
-    ----------
-    notifications_id : int
-        Identificador único de la notificación.
-    message : str
-        Mensaje de la notificación.
-    date : datetime
-        Fecha de creación de la notificación.
-    user_id : int
-        Identificador del usuario que recibe la notificación.
-    invitation_id : int
-        Identificador de la invitación relacionada, si aplica.
-    notification_type_id : int
-        Tipo de notificación.
-    farm_id : int
-        Identificador de la finca relacionada, si aplica.
-    status_id : int
-        Relación con el estado de la notificación.
-    """
     __tablename__ = 'notifications'
 
-    notifications_id = Column(Integer, primary_key=True, server_default=Sequence('notifications_notifications_id_seq').next_value())
+    notification_id = Column(Integer, primary_key=True)
     message = Column(String(255), nullable=True)
-    date = Column(DateTime, default=datetime.utcnow, nullable=False)
+    notification_date = Column(DateTime(timezone=True), nullable=False)
     user_id = Column(Integer, ForeignKey('users.user_id'), nullable=False)
-    invitation_id = Column(Integer, ForeignKey('invitation.invitation_id'), nullable=True)
-    notification_type_id = Column(Integer, ForeignKey('notification_type.notification_type_id'), nullable=True)
-    farm_id = Column(Integer, ForeignKey('farm.farm_id'), nullable=True)
-    status_id = Column(Integer, ForeignKey('status.status_id'), nullable=True)
-
+    invitation_id = Column(Integer, ForeignKey('invitations.invitation_id'), nullable=True)
+    notification_type_id = Column(Integer, ForeignKey('notification_types.notification_type_id'), nullable=False)
+    notification_status_id = Column(Integer, ForeignKey('notification_states.notification_status_id'), nullable=False)
+    farm_id = Column(Integer, ForeignKey('farms.farm_id'), nullable=True)
 
     # Relaciones
-    user = relationship("User", foreign_keys=[user_id], back_populates="notifications")
+    user = relationship("User", back_populates="notifications")
     invitation = relationship("Invitation", back_populates="notifications")
-    farm = relationship("Farm")
+    farm = relationship("Farm", back_populates="notifications")
     notification_type = relationship("NotificationType", back_populates="notifications")
-    
-    # Agregar la relación con Status
-    status = relationship("Status", back_populates="notifications")
-
+    status = relationship("NotificationState", back_populates="notifications")
 
 
 # Modelo para Plot
 class Plot(Base):
-    """
-    Representa un lote de cultivo en una finca.
+    __tablename__ = 'plots'
+    __table_args__ = (
+        UniqueConstraint('name', 'farm_id'),
+        CheckConstraint('area > 0', name='check_area_positive'),
+        CheckConstraint('longitude BETWEEN -180 AND 180', name='check_longitude_range'),
+        CheckConstraint('latitude BETWEEN -90 AND 90', name='check_latitude_range'),
+        CheckConstraint('altitude >= 0 AND altitude <= 3000', name='check_altitude_range'),
+    )
 
-    Atributos:
-    ----------
-    plot_id : int
-        Identificador único del lote.
-    name : str
-        Nombre del lote.
-    longitude : str
-        Longitud del lote.
-    latitude : str
-        Latitud del lote.
-    altitude : str
-        Altitud del lote.
-    coffee_variety_id : int
-        Relación con la variedad de café plantada en el lote.
-    farm_id : int
-        Relación con la finca a la que pertenece el lote.
-    status_id : int
-        Relación con el estado del lote.
-    """
-    __tablename__ = 'plot'
-
-    plot_id = Column(Integer, primary_key=True, index=True, server_default=Sequence('plot_plot_id_seq').next_value())
-    name = Column(String(100), nullable=False)
-    longitude = Column(String(45), nullable=True)
-    latitude = Column(String(45), nullable=True)
-    altitude = Column(String(45), nullable=True)
-    coffee_variety_id = Column(Integer, ForeignKey('coffee_variety.coffee_variety_id'), nullable=False)
-    farm_id = Column(Integer, ForeignKey('farm.farm_id'), nullable=False)
-    status_id = Column(Integer, ForeignKey('status.status_id'), nullable=True)
+    plot_id = Column(Integer, primary_key=True, index=True)
+    name = Column(String(255), nullable=False)
+    longitude = Column(Numeric(11, 8), nullable=True)
+    latitude = Column(Numeric(11, 8), nullable=True)
+    altitude = Column(Numeric(10, 2), nullable=True)
+    coffee_variety_id = Column(Integer, ForeignKey('coffee_varieties.coffee_variety_id'), nullable=False)
+    farm_id = Column(Integer, ForeignKey('farms.farm_id'), nullable=False)
+    area = Column(Numeric(10, 2), nullable=False)
+    area_unit_id = Column(Integer, ForeignKey('area_units.area_unit_id'), nullable=False)
+    plot_status_id = Column(Integer, ForeignKey('plot_states.plot_status_id'), nullable=False)
 
     # Relaciones
     farm = relationship("Farm", back_populates="plots")
     coffee_variety = relationship("CoffeeVariety", back_populates="plots")
+    status = relationship("PlotState", back_populates="plots")
+    area_unit = relationship("AreaUnit")
+    transactions = relationship("Transaction", back_populates="plot")
 
-# Modelo actualizado para CoffeeVariety
+
+# Modelo para CoffeeVariety
 class CoffeeVariety(Base):
-    """
-    Representa una variedad de café con los atributos mínimos necesarios.
+    __tablename__ = 'coffee_varieties'
 
-    Atributos:
-    ----------
-    coffee_variety_id : int
-        Identificador único de la variedad de café.
-    name : str
-        Nombre de la variedad de café.
-    """
-    __tablename__ = 'coffee_variety'
-
-    coffee_variety_id = Column(Integer, primary_key=True, index=True, server_default="nextval('coffee_variety_coffee_variety_id_seq')")
-    name = Column(String(50), nullable=False)
+    coffee_variety_id = Column(Integer, primary_key=True, index=True)
+    name = Column(String(255), nullable=False, unique=True)
 
     # Relaciones
     plots = relationship("Plot", back_populates="coffee_variety")
-    
+
+
 # Modelo para TransactionCategory
 class TransactionCategory(Base):
-    """
-    Representa una categoría de transacción en el sistema.
+    __tablename__ = 'transaction_categories'
+    __table_args__ = (UniqueConstraint('name', 'transaction_type_id'),)
 
-    Atributos:
-    ----------
-    transaction_category_id : int
-        Identificador único de la categoría de transacción.
-    name : str
-        Nombre de la categoría de transacción.
-    transaction_type_id : int
-        Relación con el tipo de transacción.
-    """
-    __tablename__ = 'transaction_category'
-
-    transaction_category_id = Column(Integer, primary_key=True, server_default=Sequence('transaction_category_transaction_category_id_seq').next_value())
-    name = Column(String(50), nullable=False)
-    transaction_type_id = Column(Integer, ForeignKey('transaction_type.transaction_type_id'), nullable=False)
+    transaction_category_id = Column(Integer, primary_key=True)
+    name = Column(String(255), nullable=False)
+    transaction_type_id = Column(Integer, ForeignKey('transaction_types.transaction_type_id'), nullable=False)
 
     # Relaciones
     transaction_type = relationship("TransactionType", back_populates="categories")
-    transactions = relationship("Transaction", back_populates="transaction_category")  # Relación inversa
+    transactions = relationship("Transaction", back_populates="transaction_category")
 
 
-    # Modelo para TransactionType
+# Modelo para TransactionType
 class TransactionType(Base):
-    """
-    Representa un tipo de transacción en el sistema.
+    __tablename__ = 'transaction_types'
 
-    Atributos:
-    ----------
-    transaction_type_id : int
-        Identificador único del tipo de transacción.
-    name : str
-        Nombre del tipo de transacción.
-    """
-    __tablename__ = 'transaction_type'
-
-    transaction_type_id = Column(Integer, primary_key=True, server_default=Sequence('transaction_type_transaction_type_id_seq').next_value())
-    name = Column(String(50), nullable=False)
+    transaction_type_id = Column(Integer, primary_key=True)
+    name = Column(String(255), nullable=False, unique=True)
 
     # Relaciones
     categories = relationship("TransactionCategory", back_populates="transaction_type")
-    transactions = relationship("Transaction", back_populates="transaction_type")
-    
-    
-    # Modelo para Transaction
+
+
+# Modelo para Transaction
 class Transaction(Base):
-    """
-    Representa una transacción en un lote de cultivo.
+    __tablename__ = 'transactions'
 
-    Atributos:
-    ----------
-    transaction_id : int
-        Identificador único de la transacción.
-    plot_id : int
-        Relación con el lote en el que ocurre la transacción.
-    description : str
-        Descripción de la transacción.
-    transaction_type_id : int
-        Relación con el tipo de transacción.
-    transaction_category_id : int
-        Relación con la categoría de la transacción.
-    transaction_date : date
-        Fecha de la transacción.
-    status_id : int
-        Relación con el estado de la transacción.
-    value : Numeric
-        Valor de la transacción.
-    """
-    __tablename__ = 'transaction'
-
-    transaction_id = Column(Integer, primary_key=True, server_default=Sequence('transaction_transaction_id_seq').next_value())
-    plot_id = Column(Integer, ForeignKey('plot.plot_id'), nullable=False)
-    description = Column(String(50), nullable=True)
-    transaction_type_id = Column(Integer, ForeignKey('transaction_type.transaction_type_id'), nullable=False)
-    transaction_category_id = Column(Integer, ForeignKey('transaction_category.transaction_category_id'), nullable=False)
+    transaction_id = Column(Integer, primary_key=True)
+    plot_id = Column(Integer, ForeignKey('plots.plot_id'), nullable=False)
+    description = Column(String(255), nullable=True)
     transaction_date = Column(Date, nullable=False)
-    status_id = Column(Integer, ForeignKey('status.status_id'), nullable=False)
-    value = Column(BigInteger, nullable=False)
-    creador_id = Column(Integer, nullable=False)  # Nueva columna con valor predeterminado 2
-
+    transaction_status_id = Column(Integer, ForeignKey('transaction_states.transaction_status_id'), nullable=False)
+    value = Column(Numeric(15, 2), nullable=False)
+    transaction_category_id = Column(Integer, ForeignKey('transaction_categories.transaction_category_id'), nullable=False)
+    creator_id = Column(Integer, ForeignKey('users.user_id'), nullable=False)
 
     # Relaciones
-    plot = relationship("Plot")
-    transaction_type = relationship("TransactionType", back_populates="transactions")
-    transaction_category = relationship("TransactionCategory")
-    status = relationship("Status")
+    plot = relationship("Plot", back_populates="transactions")
+    transaction_category = relationship("TransactionCategory", back_populates="transactions")
+    status = relationship("TransactionState", back_populates="transactions")
+    creator = relationship("User", back_populates="created_transactions")

@@ -113,7 +113,7 @@ def create_invitation(invitation_data: InvitationCreate, session_token: str, db:
     existing_role_farm = db.query(UserRoleFarm).filter(
         UserRoleFarm.user_id == existing_user.user_id,
         UserRoleFarm.farm_id == invitation_data.farm_id,
-        UserRoleFarm.status_id == active_status.status_id  # Verificar que esté en estado 'Activo'
+        UserRoleFarm.status_id == active_status.status_id
     ).first()
 
     if existing_role_farm:
