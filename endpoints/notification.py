@@ -1,13 +1,13 @@
 from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
-from typing import Any, Optional
+from typing import Optional
 from datetime import datetime
 from models.models import Notification
 from utils.security import verify_session_token
 from dataBase import get_db_session
 from pydantic import BaseModel
 import logging
-from fastapi.responses import ORJSONResponse
+from utils.response import create_response, session_token_invalid_response
 
 # Configurar el logger
 logging.basicConfig(level=logging.INFO)  # Cambia a DEBUG si necesitas más detalles
@@ -23,7 +23,7 @@ class NotificationResponse(BaseModel):
     notification_type: Optional[str]  # Tipo de notificación
     invitation_id: Optional[int]  # ID de la invitación asociada (si aplica)
     farm_id: Optional[int]  # ID de la finca asociada (si aplica)
-    status: Optional[str]  # Estado de la notificación
+    notification_state: Optional[str]  # Estado de la notificación
 
     class Config:
         from_attributes = True  # Permitir que los atributos se usen como parámetros de entrada
@@ -65,7 +65,7 @@ def get_notifications(session_token: str, db: Session = Depends(get_db_session))
         logger.debug(f"Notificación obtenida: {notification}")
         logger.debug(f"Notificación ID: {notification.notifications_id}, State ID: {notification.notification_state_id}")
 
-        # Verificar si la relación 'status' está cargada y no es None
+        # Verificar si la relación 'state' está cargada y no es None
         if notification.state is None:
             logger.warning(f"La notificación con ID {notification.notifications_id} no tiene 'state'.")
         else:
@@ -81,7 +81,7 @@ def get_notifications(session_token: str, db: Session = Depends(get_db_session))
                 notification_type=notification.notification_type.name if notification.notification_type else None,
                 invitation_id=notification.invitation_id,
                 farm_id=notification.farm_id,
-                status=notification.state.name if notification.state else None
+                notification_state=notification.state.name if notification.state else None
             )
             for notification in notifications
         ]
@@ -96,44 +96,3 @@ def get_notifications(session_token: str, db: Session = Depends(get_db_session))
 
     # Devolver la respuesta exitosa con las notificaciones encontradas
     return create_response("success", "Notificaciones obtenidas exitosamente.", data=notification_responses_dict)
-
-def create_response(
-    status: str,
-    message: str,
-    data: Optional[Any] = None,
-    status_code: int = 200
-) -> ORJSONResponse:
-    """
-    Crea una respuesta estructurada para el API.
-
-    Parámetros:
-    - status: Estado de la respuesta (ej. "success", "error").
-    - message: Mensaje adicional sobre la respuesta.
-    - data: Datos opcionales a incluir en la respuesta.
-    - status_code: Código de estado HTTP (default es 200).
-
-    Retorna:
-    - Respuesta en formato ORJSONResponse.
-    """
-    return ORJSONResponse(
-        status_code=status_code,
-        content={
-            "status": status,
-            "message": message,
-            "data": data or {}
-        }
-    )
-
-def session_token_invalid_response() -> ORJSONResponse:
-    """
-    Crea una respuesta para el caso en que el token de sesión es inválido.
-
-    Retorna:
-    - Respuesta indicando que las credenciales han expirado.
-    """
-    return create_response(
-        status="error",
-        message="Credenciales expiradas, cerrando sesión.",
-        data={},
-        status_code=401
-    )

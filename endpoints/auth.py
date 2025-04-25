@@ -124,8 +124,8 @@ def register_user(user: UserCreate, db: Session = Depends(get_db_session)):
         verification_token = generate_verification_token(4)
 
          # Usar get_state para obtener el estado "No Verificado" del tipo "User"
-        status_record = get_state(db, "No Verificado", "User")
-        if not status_record:
+        user_state_record = get_state(db, "No Verificado", "User")
+        if not user_state_record:
             return create_response("error", "No se encontró el estado 'No Verificado' para el tipo 'User'", status_code=400)
 
         # Crear el nuevo usuario con estado "No Verificado"
@@ -134,7 +134,7 @@ def register_user(user: UserCreate, db: Session = Depends(get_db_session)):
             email=user.email,
             password_hash=password_hash,
             verification_token=verification_token,
-            user_state_id=status_record.user_state_id  # Asignamos el user_state_id dinámicamente
+            user_state_id=user_state_record.user_state_id  # Asignamos el user_state_id dinámicamente
         )
 
         db.add(new_user)
@@ -164,13 +164,13 @@ def verify_email(request: VerifyTokenRequest, db: Session = Depends(get_db_sessi
     
     try:
         # Usar get_state para obtener el estado "Verificado" del tipo "User"
-        status_verified = get_state(db, "Verificado", "User")
-        if not status_verified:
+        verified_state = get_state(db, "Verificado", "User")
+        if not verified_state:
             return create_response("error", "No se encontró el estado 'Verificado' para el tipo 'User'", status_code=400)
 
         # Actualizar el usuario: marcar como verificado y cambiar el user_state_id
         user.verification_token = None
-        user.user_state_id = status_verified.user_state_id
+        user.user_state_id = verified_state.user_state_id
         
         # Guardar los cambios en la base de datos
         db.commit()
@@ -250,29 +250,6 @@ Este endpoint permite verificar si un token de restablecimiento de contraseña e
 - **Cuerpo de la solicitud**:
   - `token` (string): El token de verificación que debe ser validado.
 
-- **Respuestas**:
-  - **200 OK**: El token es válido y se puede proceder con el restablecimiento de contraseña.
-    ```json
-    {
-        "status": "success",
-        "message": "Token válido. Puede proceder a restablecer la contraseña."
-    }
-    ```
-  - **400 Bad Request**: El token es inválido o ha expirado.
-    ```json
-    {
-        "status": "error",
-        "message": "Token ha expirado" / "Token inválido o expirado"
-    }
-    ```
-
-- **Ejemplo de solicitud**:
-    ```bash
-    curl -X POST "https://tu-api.com/verify-token" \
-    -H "Content-Type: application/json" \
-    -d '{"token": "abcd1234"}'
-    ```
-
 - **Logs**: El endpoint genera logs para el inicio y la finalización del proceso de verificación del token, así como cualquier token expirado o inválido.
 """
     global reset_tokens
@@ -312,29 +289,6 @@ Este endpoint permite restablecer la contraseña de un usuario, siempre que el t
   - `token` (string): El token de verificación.
   - `new_password` (string): La nueva contraseña.
   - `confirm_password` (string): Confirmación de la nueva contraseña.
-
-- **Respuestas**:
-  - **200 OK**: La contraseña fue restablecida exitosamente.
-    ```json
-    {
-        "status": "success",
-        "message": "Contraseña restablecida exitosamente"
-    }
-    ```
-  - **400 Bad Request**: Las contraseñas no coinciden, no cumplen con los requisitos, o el token es inválido o ha expirado.
-    ```json
-    {
-        "status": "error",
-        "message": "Las contraseñas no coinciden" / "Token ha expirado" / "Token inválido o expirado"
-    }
-    ```
-
-- **Ejemplo de solicitud**:
-    ```bash
-    curl -X POST "https://tu-api.com/reset-password" \
-    -H "Content-Type: application/json" \
-    -d '{"token": "abcd1234", "new_password": "NewPassword123!", "confirm_password": "NewPassword123!"}'
-    ```
 
 - **Logs**: Se generan logs detallados para cada paso, incluidos errores al actualizar la contraseña o si el token ha expirado.
 """
@@ -424,33 +378,6 @@ Este endpoint permite a los usuarios autenticarse mediante correo electrónico y
   - `password` (string): Contraseña del usuario.
   - `fcm_token` (string): Token FCM para notificaciones push.
 
-- **Respuestas**:
-  - **200 OK**: El inicio de sesión fue exitoso.
-    ```json
-    {
-        "status": "success",
-        "message": "Inicio de sesión exitoso",
-        "data": {
-            "session_token": "abcd1234",
-            "name": "Usuario Ejemplo"
-        }
-    }
-    ```
-  - **400 Bad Request**: Credenciales incorrectas o el correo no ha sido verificado.
-    ```json
-    {
-        "status": "error",
-        "message": "Credenciales incorrectas" / "Debes verificar tu correo antes de iniciar sesión"
-    }
-    ```
-
-- **Ejemplo de solicitud**:
-    ```bash
-    curl -X POST "https://tu-api.com/login" \
-    -H "Content-Type: application/json" \
-    -d '{"email": "user@example.com", "password": "MySecurePassword", "fcm_token": "fcmToken123"}'
-    ```
-
 - **Logs**: Se registran logs para errores de autenticación, generación de tokens de sesión y cualquier error durante el inicio de sesión.
 """
     user = db.query(User).filter(User.email == request.email).first()
@@ -458,8 +385,8 @@ Este endpoint permite a los usuarios autenticarse mediante correo electrónico y
     if not user or not verify_password(request.password, user.password_hash):
         return create_response("error", "Credenciales incorrectas")
 
-    status_verified = get_state(db, "Verificado", "User")
-    if not status_verified or user.status_id != status_verified.status_id:
+    verified_state = get_state(db, "Verificado", "User")
+    if not verified_state or user.user_state_id != verified_state.user_state_id:
         new_verification_token = generate_verification_token(4)
         user.verification_token = new_verification_token
 
@@ -500,29 +427,6 @@ Este endpoint permite a los usuarios cambiar su contraseña siempre que proporci
   - `current_password` (string): La contraseña actual.
   - `new_password` (string): La nueva contraseña.
   - `confirm_password` (string): Confirmación de la nueva contraseña.
-
-- **Respuestas**:
-  - **200 OK**: El cambio de contraseña fue exitoso.
-    ```json
-    {
-        "status": "success",
-        "message": "Cambio de contraseña exitoso"
-    }
-    ```
-  - **400 Bad Request**: Las contraseñas no coinciden, no cumplen con los requisitos de seguridad, o la contraseña actual es incorrecta.
-    ```json
-    {
-        "status": "error",
-        "message": "Credenciales incorrectas" / "Las contraseñas no coinciden"
-    }
-    ```
-
-- **Ejemplo de solicitud**:
-    ```bash
-    curl -X PUT "https://tu-api.com/change-password" \
-    -H "Content-Type: application/json" \
-    -d '{"current_password": "OldPassword123!", "new_password": "NewPassword123!", "confirm_password": "NewPassword123!"}'
-    ```
 
 - **Logs**: Se registran logs para errores de validación de contraseñas, así como cualquier error al confirmar cambios en la base de datos.
 """

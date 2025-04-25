@@ -38,14 +38,14 @@ class ListFarmResponse(BaseModel):
     - **name**: Nombre de la finca (cadena de texto).
     - **area**: Área de la finca (float), representada en la unidad de medida especificada.
     - **area_unit**: Unidad de medida del área (cadena de texto).
-    - **status**: Estado actual de la finca (cadena de texto), por ejemplo, 'Activo' o 'Inactivo'.
+    - **farm_state**: Estado actual de la finca (cadena de texto), por ejemplo, 'Activo' o 'Inactivo'.
     - **role**: Rol del usuario en relación a la finca (cadena de texto), como 'Propietario' o 'Administrador'.
     """
     farm_id: int
     name: str
     area: float
     area_unit: str
-    status: str
+    farm_state: str
     role: str
     
 class UpdateFarmRequest(BaseModel):
@@ -109,23 +109,23 @@ def create_farm(request: CreateFarmRequest, session_token: str, db: Session = De
         logger.warning("El área de la finca no puede exceder las 10,000 unidades de medida")
         return create_response("error", "El área de la finca no puede exceder las 10,000 unidades de medida")
 
-    # Obtener el status "Activo" para el tipo "Farm"
-    active_farm_status = get_state(db, "Activo", "Farm")
-    if not active_farm_status:
+    # Obtener el state "Activo" para el tipo "Farm"
+    active_farm_state = get_state(db, "Activo", "Farm")
+    if not active_farm_state:
         logger.error("No se encontró el estado 'Activo' para el tipo 'Farm'")
         return create_response("error", "No se encontró el estado 'Activo' para el tipo 'Farm'", status_code=400)
 
     # Comprobar si el usuario ya tiene una finca activa con el mismo nombre
-    active_urf_status = get_state(db, "Activo", "user_role_farm")
-    if not active_urf_status:
+    active_urf_state = get_state(db, "Activo", "user_role_farm")
+    if not active_urf_state:
         logger.error("No se encontró el estado 'Activo' para el tipo 'user_role_farm'")
         return create_response("error", "No se encontró el estado 'Activo' para el tipo 'user_role_farm'", status_code=400)
 
     existing_farm = db.query(Farm).join(UserRoleFarm).filter(
         Farm.name == request.name,
         UserRoleFarm.user_id == user.user_id,
-        Farm.farm_state_id == active_farm_status.farm_state_id,  # Filtrar solo por fincas activas
-        UserRoleFarm.user_farm_role_state_id == active_urf_status.user_farm_role_state_id  # Check if association is active
+        Farm.farm_state_id == active_farm_state.farm_state_id,  # Filtrar solo por fincas activas
+        UserRoleFarm.user_farm_role_state_id == active_urf_state.user_farm_role_state_id  # Check if association is active
     ).first()
 
     if existing_farm:
@@ -137,11 +137,10 @@ def create_farm(request: CreateFarmRequest, session_token: str, db: Session = De
     if not area_unit:
         logger.warning("Unidad de medida no válida: %s", request.areaUnit)
         return create_response("error", "Unidad de medida no válida")
-    
-    # Obtener el StatusType con nombre "Farm"
-    # Obtener el status "Activo" para el tipo "Farm" utilizando get_state
-    status_record = get_state(db, "Activo", "Farm")
-    if not status_record:
+
+    # Obtener el state "Activo" para el tipo "Farm" utilizando get_state
+    farm_state_record = get_state(db, "Activo", "Farm")
+    if not farm_state_record:
         logger.error("No se encontró el estado 'Activo' para el tipo 'Farm'")
         return create_response("error", "No se encontró el estado 'Activo' para el tipo 'Farm'", status_code=400)
 
@@ -151,7 +150,7 @@ def create_farm(request: CreateFarmRequest, session_token: str, db: Session = De
             name=request.name,
             area=request.area,
             area_unit_id=area_unit.area_unit_id,
-            farm_state_id=status_record.farm_state_id
+            farm_state_id=farm_state_record.farm_state_id
         )
         db.add(new_farm)
         db.commit()
@@ -164,9 +163,9 @@ def create_farm(request: CreateFarmRequest, session_token: str, db: Session = De
             logger.error("Rol 'Propietario' no encontrado")
             raise HTTPException(status_code=400, detail="Rol 'Propietario' no encontrado")
 
-        # Get active status for UserRoleFarm
-        active_urf_status = get_state(db, "Activo", "user_role_farm")
-        if not active_urf_status:
+        # Get active state for UserRoleFarm
+        active_urf_state = get_state(db, "Activo", "user_role_farm")
+        if not active_urf_state:
              logger.error("No se encontró el estado 'Activo' para el tipo 'user_role_farm'")
              raise HTTPException(status_code=400, detail="No se encontró el estado 'Activo' para el tipo 'user_role_farm'")
 
@@ -175,7 +174,7 @@ def create_farm(request: CreateFarmRequest, session_token: str, db: Session = De
             user_id=user.user_id,
             farm_id=new_farm.farm_id,
             role_id=role.role_id,
-            user_farm_role_state_id=active_urf_status.user_farm_role_state_id  # Use looked-up status ID
+            user_farm_role_state_id=active_urf_state.user_farm_role_state_id  # Use looked-up state ID
         )
         db.add(user_role_farm)
         db.commit()
@@ -226,15 +225,15 @@ def list_farm(session_token: str, db: Session = Depends(get_db_session)):
         logger.warning("Token de sesión inválido o usuario no encontrado")
         return session_token_invalid_response()
 
-    # Obtener el status "Activo" para el tipo "Farm"
-    active_farm_status = get_state(db, "Activo", "Farm")
-    if not active_farm_status:
+    # Obtener el state "Activo" para el tipo "Farm"
+    active_farm_state = get_state(db, "Activo", "Farm")
+    if not active_farm_state:
         logger.error("No se encontró el estado 'Activo' para el tipo 'Farm'")
         return create_response("error", "Estado 'Activo' no encontrado para Farm", status_code=400)
 
-    # Obtener el status "Activo" para el tipo "user_role_farm"
-    active_urf_status = get_state(db, "Activo", "user_role_farm")
-    if not active_urf_status:
+    # Obtener el state "Activo" para el tipo "user_role_farm"
+    active_urf_state = get_state(db, "Activo", "user_role_farm")
+    if not active_urf_state:
         logger.error("No se encontró el estado 'Activo' para el tipo 'user_role_farm'")
         return create_response("error", "Estado 'Activo' no encontrado para user_role_farm", status_code=400)
 
@@ -250,18 +249,18 @@ def list_farm(session_token: str, db: Session = Depends(get_db_session)):
             Role, UserRoleFarm.role_id == Role.role_id
         ).filter(
             UserRoleFarm.user_id == user.user_id,
-            UserRoleFarm.user_farm_role_state_id == active_urf_status.user_farm_role_state_id,
-            Farm.farm_state_id == active_farm_status.farm_state_id
+            UserRoleFarm.user_farm_role_state_id == active_urf_state.user_farm_role_state_id,
+            Farm.farm_state_id == active_farm_state.farm_state_id
         ).all()
 
         farm_list = []
-        for farm, area_unit, status, role in farms:
+        for farm, area_unit, farm_state, role in farms:
             farm_list.append(ListFarmResponse(
                 farm_id=farm.farm_id,
                 name=farm.name,
                 area=farm.area,
                 area_unit=area_unit.name,
-                status=status.name,
+                farm_state=farm_state.name,
                 role=role.name
             ))
 
@@ -313,16 +312,16 @@ def update_farm(request: UpdateFarmRequest, session_token: str, db: Session = De
         logger.warning("Token de sesión inválido o usuario no encontrado")
         return session_token_invalid_response()
 
-    # Obtener el status "Activo" para la finca y la relación user_role_farm
-    active_farm_status = get_state(db, "Activo", "Farm")
-    active_urf_status = get_state(db, "Activo", "user_role_farm")
+    # Obtener el state "Activo" para la finca y la relación user_role_farm
+    active_farm_state = get_state(db, "Activo", "Farm")
+    active_urf_state = get_state(db, "Activo", "user_role_farm")
 
     # Verificar si el usuario está asociado con la finca y si tanto la finca como la relación están activas
     user_role_farm = db.query(UserRoleFarm).join(Farm).filter(
         UserRoleFarm.farm_id == request.farm_id,
         UserRoleFarm.user_id == user.user_id,
-        UserRoleFarm.user_farm_role_state_id == active_urf_status.user_farm_role_state_id,
-        Farm.farm_state_id == active_farm_status.farm_state_id
+        UserRoleFarm.user_farm_role_state_id == active_urf_state.user_farm_role_state_id,
+        Farm.farm_state_id == active_farm_state.farm_state_id
     ).first()
 
     if not user_role_farm:
@@ -372,8 +371,8 @@ def update_farm(request: UpdateFarmRequest, session_token: str, db: Session = De
                 Farm.farm_id != request.farm_id,
                 UserRoleFarm.user_id == user.user_id,
                 Role.name == "Propietario",  # Verificar que el usuario sea propietario
-                Farm.farm_state_id == active_farm_status.farm_state_id,
-                UserRoleFarm.user_farm_role_state_id == active_urf_status.user_farm_role_state_id
+                Farm.farm_state_id == active_farm_state.farm_state_id,
+                UserRoleFarm.user_farm_role_state_id == active_urf_state.user_farm_role_state_id
             ).first()
 
             if existing_farm:
@@ -427,14 +426,14 @@ def get_farm(farm_id: int, session_token: str, db: Session = Depends(get_db_sess
         logger.warning("Token de sesión inválido o usuario no encontrado")
         return session_token_invalid_response()
 
-    # Obtener el status "Activo" para la finca y user_role_farm
-    active_farm_status = get_state(db, "Activo", "Farm")
-    if not active_farm_status:
+    # Obtener el state "Activo" para la finca y user_role_farm
+    active_farm_state = get_state(db, "Activo", "Farm")
+    if not active_farm_state:
         logger.error("No se encontró el estado 'Activo' para el tipo 'Farm'")
         return create_response("error", "Estado 'Activo' no encontrado para Farm", status_code=400)
 
-    active_urf_status = get_state(db, "Activo", "user_role_farm")
-    if not active_urf_status:
+    active_urf_state = get_state(db, "Activo", "user_role_farm")
+    if not active_urf_state:
         logger.error("No se encontró el estado 'Activo' para el tipo 'user_role_farm'")
         return create_response("error", "Estado 'Activo' no encontrado para user_role_farm", status_code=400)
 
@@ -450,8 +449,8 @@ def get_farm(farm_id: int, session_token: str, db: Session = Depends(get_db_sess
             Role, UserRoleFarm.role_id == Role.role_id
         ).filter(
             UserRoleFarm.user_id == user.user_id,
-            UserRoleFarm.user_farm_role_state_id == active_urf_status.user_farm_role_state_id,
-            Farm.farm_state_id == active_farm_status.farm_state_id,
+            UserRoleFarm.user_farm_role_state_id == active_urf_state.user_farm_role_state_id,
+            Farm.farm_state_id == active_farm_state.farm_state_id,
             Farm.farm_id == farm_id
         ).first()
 
@@ -460,7 +459,7 @@ def get_farm(farm_id: int, session_token: str, db: Session = Depends(get_db_sess
             logger.warning("Finca no encontrada o no pertenece al usuario")
             return create_response("error", "Finca no encontrada o no pertenece al usuario")
 
-        farm, area_unit, status, role = farm_data
+        farm, area_unit, farm_state, role = farm_data
 
         # Crear la respuesta en el formato esperado
         farm_response = ListFarmResponse(
@@ -468,7 +467,7 @@ def get_farm(farm_id: int, session_token: str, db: Session = Depends(get_db_sess
             name=farm.name,
             area=farm.area,
             area_unit=area_unit.name,
-            status=status.name,
+            farm_state=farm_state.name,
             role=role.name
         )
 
@@ -491,13 +490,6 @@ def delete_farm(farm_id: int, session_token: str, db: Session = Depends(get_db_s
 
     **Respuesta exitosa (200):**
     - **Descripción**: Indica que la finca ha sido desactivada correctamente.
-    - **Ejemplo de respuesta:**
-      ```json
-      {
-          "status": "success",
-          "message": "Finca puesta en estado 'Inactiva' correctamente"
-      }
-      ```
 
     **Errores:**
     - **401 Unauthorized**: Si el token de sesión es inválido o el usuario no se encuentra.
@@ -506,13 +498,6 @@ def delete_farm(farm_id: int, session_token: str, db: Session = Depends(get_db_s
     - **404 Not Found**: Si la finca no se encuentra.
     - **500 Internal Server Error**: Si ocurre un error al desactivar la finca.
 
-    **Ejemplo de respuesta de error:**
-    ```json
-    {
-        "status": "error",
-        "message": "No tienes permiso para eliminar esta finca"
-    }
-    ```
     """
     # Verificar el token de sesión
     user = verify_session_token(session_token, db)
@@ -520,14 +505,14 @@ def delete_farm(farm_id: int, session_token: str, db: Session = Depends(get_db_s
         logger.warning("Token de sesión inválido o usuario no encontrado")
         return create_response("error", "Token de sesión inválido o usuario no encontrado")
 
-    # Obtener el status "Activo" para la finca y user_role_farm
-    active_farm_status = get_state(db, "Activo", "Farm")
-    if not active_farm_status:
+    # Obtener el state "Activo" para la finca y user_role_farm
+    active_farm_state = get_state(db, "Activo", "Farm")
+    if not active_farm_state:
         logger.error("No se encontró el estado 'Activo' para el tipo 'Farm'")
         return create_response("error", "Estado 'Activo' no encontrado para Farm", status_code=400)
 
-    active_urf_status = get_state(db, "Activo", "user_role_farm")
-    if not active_urf_status:
+    active_urf_state = get_state(db, "Activo", "user_role_farm")
+    if not active_urf_state:
         logger.error("No se encontró el estado 'Activo' para el tipo 'user_role_farm'")
         return create_response("error", "Estado 'Activo' no encontrado para user_role_farm", status_code=400)
 
@@ -535,8 +520,8 @@ def delete_farm(farm_id: int, session_token: str, db: Session = Depends(get_db_s
     user_role_farm = db.query(UserRoleFarm).join(Farm).filter(
         UserRoleFarm.user_id == user.user_id,
         UserRoleFarm.farm_id == farm_id,
-        UserRoleFarm.user_farm_role_state_id == active_urf_status.user_farm_role_state_id,
-        Farm.farm_state_id == active_farm_status.farm_state_id
+        UserRoleFarm.user_farm_role_state_id == active_urf_state.user_farm_role_state_id,
+        Farm.farm_state_id == active_farm_state.farm_state_id
     ).first()
 
     if not user_role_farm:
@@ -561,24 +546,24 @@ def delete_farm(farm_id: int, session_token: str, db: Session = Depends(get_db_s
             return create_response("error", "Finca no encontrada")
 
         # Cambiar el estado de la finca a "Inactiva"
-        inactive_farm_status = get_state(db, "Inactiva", "Farm")
+        inactive_farm_state = get_state(db, "Inactiva", "Farm")
 
-        if not inactive_farm_status:
+        if not inactive_farm_state:
             logger.error("No se encontró el estado 'Inactiva' para el tipo 'Farm'")
             raise HTTPException(status_code=400, detail="No se encontró el estado 'Inactiva' para el tipo 'Farm'.")
 
-        farm.farm_state_id = inactive_farm_status.farm_state_id
+        farm.farm_state_id = inactive_farm_state.farm_state_id
 
         # Cambiar el estado de todas las relaciones en user_role_farm a "Inactiva"
-        inactive_urf_status = get_state(db, "Inactiva", "user_role_farm")
+        inactive_urf_state = get_state(db, "Inactiva", "user_role_farm")
 
-        if not inactive_urf_status:
+        if not inactive_urf_state:
             logger.error("No se encontró el estado 'Inactiva' para el tipo 'user_role_farm'")
             raise HTTPException(status_code=400, detail="No se encontró el estado 'Inactiva' para el tipo 'user_role_farm'.")
 
         user_role_farms = db.query(UserRoleFarm).filter(UserRoleFarm.farm_id == farm_id).all()
         for urf in user_role_farms:
-            urf.user_farm_role_state_id = inactive_urf_status.user_farm_role_state_id
+            urf.user_farm_role_state_id = inactive_urf_state.user_farm_role_state_id
 
         db.commit()
         logger.info("Finca y relaciones en user_role_farm puestas en estado 'Inactiva' para la finca con ID %s", farm_id)

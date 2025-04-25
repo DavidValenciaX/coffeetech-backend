@@ -14,10 +14,8 @@ import pytz
 
 bogota_tz = pytz.timezone("America/Bogota")
 
-
 from datetime import datetime
 from models.models import Invitation, Notification
-
 
 # Configuración básica de logging
 logging.basicConfig(level=logging.INFO)
@@ -62,14 +60,14 @@ def create_invitation(invitation_data: InvitationCreate, session_token: str, db:
         return create_response("error", "Finca no encontrada", status_code=404)
 
     # Verificar si el usuario (invitador) está asociado a la finca y cuál es su rol
-    active_status = get_state(db, "Activo", "user_role_farm")
-    if not active_status:
+    urf_active_state = get_state(db, "Activo", "user_role_farm")
+    if not urf_active_state:
         return create_response("error", "El estado 'Activo' no fue encontrado para 'user_role_farm'", status_code=400)
 
     user_role_farm = db.query(UserRoleFarm).filter(
         UserRoleFarm.user_id == user.user_id,
         UserRoleFarm.farm_id == invitation_data.farm_id,
-        UserRoleFarm.user_farm_role_state_id == active_status.user_farm_role_state_id  # Usar el estado "Activo"
+        UserRoleFarm.user_farm_role_state_id == urf_active_state.user_farm_role_state_id  # Usar el estado "Activo"
     ).first()
 
     if not user_role_farm:
@@ -106,28 +104,28 @@ def create_invitation(invitation_data: InvitationCreate, session_token: str, db:
         return create_response("error", "El usuario no está registrado", status_code=404)
 
     # Verificar si el usuario ya pertenece a la finca
-    active_status = get_state(db, "Activo", "user_role_farm")
-    if not active_status:
+    urf_active_state = get_state(db, "Activo", "user_role_farm")
+    if not urf_active_state:
         return create_response("error", "El estado 'Activo' no fue encontrado para 'user_role_farm'", status_code=400)
 
     existing_role_farm = db.query(UserRoleFarm).filter(
         UserRoleFarm.user_id == existing_user.user_id,
         UserRoleFarm.farm_id == invitation_data.farm_id,
-        UserRoleFarm.user_farm_role_state_id == active_status.user_farm_role_state_id
+        UserRoleFarm.user_farm_role_state_id == urf_active_state.user_farm_role_state_id
     ).first()
 
     if existing_role_farm:
         return create_response("error", "El usuario ya está asociado a la finca con un estado activo", status_code=400)
 
     # Verificar si el usuario ya tiene una invitación pendiente
-    pending_status = get_state(db, "Pendiente", "Invitation")
-    if not pending_status:
+    invitation_pending_state = get_state(db, "Pendiente", "Invitation")
+    if not invitation_pending_state:
         return create_response("error", "El estado 'Pendiente' no fue encontrado para 'Invitation'", status_code=400)
 
     existing_invitation = db.query(Invitation).filter(
         Invitation.email == invitation_data.email,
         Invitation.farm_id == invitation_data.farm_id,
-        Invitation.invitation_state_id == pending_status.invitation_state_id  # Usar el estado "Pendiente"
+        Invitation.invitation_state_id == invitation_pending_state.invitation_state_id  # Usar el estado "Pendiente"
     ).first()
 
     if existing_invitation:
@@ -148,8 +146,8 @@ def create_invitation(invitation_data: InvitationCreate, session_token: str, db:
         db.refresh(new_invitation)
 
         # Crear la notificación asociada con notification_type_id
-        pending_status = get_state(db, "Pendiente", "Notification")
-        if not pending_status:
+        notification_pending_state = get_state(db, "Pendiente", "Notification")
+        if not notification_pending_state:
             return create_response("error", "El estado 'Pendiente' no fue encontrado para 'Notification'", status_code=400)
 
         invitation_notification_type = db.query(NotificationType).filter(NotificationType.name == "Invitation").first()
@@ -163,7 +161,7 @@ def create_invitation(invitation_data: InvitationCreate, session_token: str, db:
             notification_type_id=invitation_notification_type.notification_type_id,  # Usar notification_type_id
             invitation_id=new_invitation.invitation_id,
             farm_id=invitation_data.farm_id,
-            status_id=pending_status.status_id  # Estado "Pendiente" del tipo "Notification"
+            notification_state_id=notification_pending_state.notification_state_id  # Estado "Pendiente" del tipo "Notification"
         )
         db.add(new_notification)
         db.commit()
@@ -213,32 +211,32 @@ def respond_invitation(invitation_id: int, action: str, session_token: str, db: 
         return create_response("error", "No tienes permiso para responder esta invitación", status_code=403)
 
     # Usar get_state para obtener los estados "Aceptada" y "Rechazada" del tipo "Invitation"
-    accepted_status = get_state(db, "Aceptada", "Invitation")
-    rejected_status = get_state(db, "Rechazada", "Invitation")
-    responded_status = get_state(db, "Respondida", "Notification")  # Obtener el estado "Respondida"
+    accepted_invitation_state = get_state(db, "Aceptada", "Invitation")
+    rejected_invitation_state = get_state(db, "Rechazada", "Invitation")
+    responded_notification_state = get_state(db, "Respondida", "Notification")  # Obtener el estado "Respondida"
 
-    if not accepted_status or not rejected_status or not responded_status:
+    if not accepted_invitation_state or not rejected_invitation_state or not responded_notification_state:
         return create_response("error", "Estados necesarios no encontrados en la base de datos", status_code=500)
 
     # Verificar si la invitación ya fue aceptada o rechazada
-    if invitation.invitation_state_id in [accepted_status.invitation_state_id, rejected_status.invitation_state_id]:
+    if invitation.invitation_state_id in [accepted_invitation_state.invitation_state_id, rejected_invitation_state.invitation_state_id]:
         return create_response("error", "La invitación ya ha sido procesada (aceptada o rechazada)", status_code=400)
 
     # Actualizar las notificaciones relacionadas con la invitación
     notification = db.query(Notification).filter(Notification.invitation_id == invitation_id).first()
     if notification:
-        notification.status_id = responded_status.status_id  # Actualizar el estado a "Respondida"
+        notification.notification_state_id = responded_notification_state.notification_state_id  # Actualizar el estado a "Respondida"
         db.commit()
 
     # Verificar si la acción es "accept" o "reject"
     if action.lower() == "accept":
         # Cambiar el estado de la invitación a "Aceptada"
-        invitation.invitation_state_id = accepted_status.invitation_state_id
+        invitation.invitation_state_id = accepted_invitation_state.invitation_state_id
         db.commit()
 
         # Usar la función get_state para obtener el estado "Activo" del tipo "user_role_farm"
-        active_status = get_state(db, "Activo", "user_role_farm")
-        if not active_status:
+        urf_active_state = get_state(db, "Activo", "user_role_farm")
+        if not urf_active_state:
             return create_response("error", "El estado 'Activo' no fue encontrado para 'user_role_farm'", status_code=400)
 
         # Obtener el rol sugerido
@@ -251,7 +249,7 @@ def respond_invitation(invitation_id: int, action: str, session_token: str, db: 
             user_id=user.user_id,
             farm_id=invitation.farm_id,
             role_id=suggested_role.role_id,  # Asignar el rol sugerido
-            user_farm_role_state_id=active_status.user_farm_role_state_id  # Estado "Activo" del tipo "user_role_farm"
+            user_farm_role_state_id=urf_active_state.user_farm_role_state_id  # Estado "Activo" del tipo "user_role_farm"
         )
         db.add(new_user_role_farm)
         db.commit()
@@ -271,7 +269,7 @@ def respond_invitation(invitation_id: int, action: str, session_token: str, db: 
                 notification_type_id=accepted_notification_type.notification_type_id,  # Usar notification_type_id
                 invitation_id=invitation.invitation_id,
                 farm_id=invitation.farm_id,
-                status_id=responded_status.status_id  # Estado "Respondida" del tipo "Notification"
+                notification_state_id=responded_notification_state.notification_state_id  # Estado "Respondida" del tipo "Notification"
             )
             db.add(new_notification)
             db.commit()
@@ -284,7 +282,7 @@ def respond_invitation(invitation_id: int, action: str, session_token: str, db: 
 
     elif action.lower() == "reject":
         # Cambiar el estado de la invitación a "Rechazada"
-        invitation.invitation_state_id = rejected_status.invitation_state_id
+        invitation.invitation_state_id = rejected_invitation_state.invitation_state_id
         db.commit()
 
         # Crear la notificación para el usuario que hizo la invitación (inviter_user_id)
@@ -302,7 +300,7 @@ def respond_invitation(invitation_id: int, action: str, session_token: str, db: 
                 notification_type_id=rejected_notification_type.notification_type_id,  # Usar notification_type_id
                 invitation_id=invitation.invitation_id,
                 farm_id=invitation.farm_id,
-                status_id=responded_status.status_id  # Estado "Respondida" del tipo "Notification"
+                notification_state_id=responded_notification_state.notification_state_id  # Estado "Respondida" del tipo "Notification"
             )
             db.add(new_notification)
             db.commit()
