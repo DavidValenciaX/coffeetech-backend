@@ -29,9 +29,9 @@ class Farm(Base):
     plots = relationship("Plot", back_populates="farm")
     notifications = relationship("Notification", back_populates="farm")
 
-class UserFarmRoleState(Base):
-    __tablename__ = 'user_farm_role_states'
-    user_farm_role_state_id = Column(Integer, primary_key=True)
+class UserRoleFarmState(Base):
+    __tablename__ = 'user_role_farm_states'
+    user_role_farm_state_id = Column(Integer, primary_key=True)
     name = Column(String(45), nullable=False, unique=True)
 
 class UserRoleFarm(Base):
@@ -41,7 +41,7 @@ class UserRoleFarm(Base):
     role_id = Column(Integer, ForeignKey('roles.role_id'), nullable=False)
     user_id = Column(Integer, ForeignKey('users.user_id'), nullable=False)
     farm_id = Column(Integer, ForeignKey('farms.farm_id'), nullable=False)
-    user_farm_role_state_id = Column(Integer, ForeignKey('user_farm_role_states.user_farm_role_state_id'), nullable=False)
+    user_role_farm_state_id = Column(Integer, ForeignKey('user_role_farm_states.user_role_farm_state_id'), nullable=False)
     __table_args__ = (UniqueConstraint('user_id', 'role_id', 'farm_id'),)
 
     # Relaciones

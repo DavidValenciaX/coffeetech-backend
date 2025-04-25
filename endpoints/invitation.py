@@ -67,7 +67,7 @@ def create_invitation(invitation_data: InvitationCreate, session_token: str, db:
     user_role_farm = db.query(UserRoleFarm).filter(
         UserRoleFarm.user_id == user.user_id,
         UserRoleFarm.farm_id == invitation_data.farm_id,
-        UserRoleFarm.user_farm_role_state_id == urf_active_state.user_farm_role_state_id  # Usar el estado "Activo"
+        UserRoleFarm.user_role_farm_state_id == urf_active_state.user_role_farm_state_id  # Usar el estado "Activo"
     ).first()
 
     if not user_role_farm:
@@ -111,7 +111,7 @@ def create_invitation(invitation_data: InvitationCreate, session_token: str, db:
     existing_role_farm = db.query(UserRoleFarm).filter(
         UserRoleFarm.user_id == existing_user.user_id,
         UserRoleFarm.farm_id == invitation_data.farm_id,
-        UserRoleFarm.user_farm_role_state_id == urf_active_state.user_farm_role_state_id
+        UserRoleFarm.user_role_farm_state_id == urf_active_state.user_role_farm_state_id
     ).first()
 
     if existing_role_farm:
@@ -249,7 +249,7 @@ def respond_invitation(invitation_id: int, action: str, session_token: str, db: 
             user_id=user.user_id,
             farm_id=invitation.farm_id,
             role_id=suggested_role.role_id,  # Asignar el rol sugerido
-            user_farm_role_state_id=urf_active_state.user_farm_role_state_id  # Estado "Activo" del tipo "user_role_farm"
+            user_role_farm_state_id=urf_active_state.user_role_farm_state_id  # Estado "Activo" del tipo "user_role_farm"
         )
         db.add(new_user_role_farm)
         db.commit()

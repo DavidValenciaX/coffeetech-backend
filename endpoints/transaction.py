@@ -92,7 +92,7 @@ def create_transaction(
     
     user_role_farm = db.query(UserRoleFarm).filter(
         UserRoleFarm.user_id == user.user_id,
-        UserRoleFarm.user_farm_role_state_id == active_urf_state.user_farm_role_state_id
+        UserRoleFarm.user_role_farm_state_id == active_urf_state.user_role_farm_state_id
     ).first()
     
     if not user_role_farm:
@@ -244,7 +244,7 @@ def edit_transaction(
     user_role_farm = db.query(UserRoleFarm).filter(
         UserRoleFarm.user_id == user.user_id,
         UserRoleFarm.farm_id == transaction.plot.farm_id,
-        UserRoleFarm.user_farm_role_state_id == active_urf_state.user_farm_role_state_id
+        UserRoleFarm.user_role_farm_state_id == active_urf_state.user_role_farm_state_id
     ).first()
     
     if not user_role_farm:
@@ -388,7 +388,7 @@ def delete_transaction(
     user_role_farm = db.query(UserRoleFarm).filter(
         UserRoleFarm.user_id == user.user_id,
         UserRoleFarm.farm_id == transaction.plot.farm_id,
-        UserRoleFarm.user_farm_role_state_id == active_urf_state.user_farm_role_state_id
+        UserRoleFarm.user_role_farm_state_id == active_urf_state.user_role_farm_state_id
     ).first()
     
     if not user_role_farm:
@@ -469,7 +469,7 @@ def read_transactions(
     user_role_farm = db.query(UserRoleFarm).filter(
         UserRoleFarm.user_id == user.user_id,
         UserRoleFarm.farm_id == farm.farm_id,
-        UserRoleFarm.user_farm_role_state_id == active_urf_state.user_farm_role_state_id
+        UserRoleFarm.user_role_farm_state_id == active_urf_state.user_role_farm_state_id
     ).first()
     
     if not user_role_farm:

@@ -28,7 +28,7 @@ def get_state(db: Session, state_name: str, entity_type: str):
             return db.query(PlotState).filter(PlotState.name == state_name).first()
         elif entity_type.lower() == "notification":
             return db.query(NotificationState).filter(NotificationState.name == state_name).first()
-        elif entity_type.lower() == "user_role_farm" or entity_type.lower() == "user_farm_role":
+        elif entity_type.lower() == "user_role_farm":
             return db.query(UserFarmRoleState).filter(UserFarmRoleState.name == state_name).first()
         elif entity_type.lower() == "transaction":
             return db.query(TransactionState).filter(TransactionState.name == state_name).first()

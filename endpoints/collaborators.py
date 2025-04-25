@@ -132,7 +132,7 @@ def list_collaborators(
             status_code=400
         )
 
-    logger.info(f"Estado 'Activo' encontrado: {urf_active_state.name} (ID: {urf_active_state.user_farm_role_state_id})") # Use correct ID field
+    logger.info(f"Estado 'Activo' encontrado: {urf_active_state.name} (ID: {urf_active_state.user_role_farm_state_id})") # Use correct ID field
 
     # 4. Obtener el permiso 'read_collaborators' con insensibilidad a mayúsculas
     read_permission = db.query(Permission).filter(
@@ -153,7 +153,7 @@ def list_collaborators(
     has_permission = db.query(UserRoleFarm).join(RolePermission, UserRoleFarm.role_id == RolePermission.role_id).filter(
         UserRoleFarm.user_id == user.user_id,
         UserRoleFarm.farm_id == farm_id,
-        UserRoleFarm.user_farm_role_state_id == urf_active_state.user_farm_role_state_id,
+        UserRoleFarm.user_role_farm_state_id == urf_active_state.user_role_farm_state_id,
         RolePermission.permission_id == read_permission.permission_id
     ).first()
 
@@ -174,7 +174,7 @@ def list_collaborators(
         Role, UserRoleFarm.role_id == Role.role_id
     ).filter(
         UserRoleFarm.farm_id == farm_id,
-        UserRoleFarm.user_farm_role_state_id == urf_active_state.user_farm_role_state_id
+        UserRoleFarm.user_role_farm_state_id == urf_active_state.user_role_farm_state_id
     ).all()
 
     logger.info(f"Colaboradores encontrados: {collaborators_query}")
@@ -278,12 +278,12 @@ def edit_collaborator_role(
             status_code=400
         )
 
-    logger.info(f"Estado 'Activo' encontrado: {urf_active_state.name} (ID: {urf_active_state.user_farm_role_state_id})") # Use correct ID field
+    logger.info(f"Estado 'Activo' encontrado: {urf_active_state.name} (ID: {urf_active_state.user_role_farm_state_id})") # Use correct ID field
 
     user_role_farm = db.query(UserRoleFarm).filter(
         UserRoleFarm.user_id == user.user_id,
         UserRoleFarm.farm_id == farm_id,
-        UserRoleFarm.user_farm_role_state_id == urf_active_state.user_farm_role_state_id
+        UserRoleFarm.user_role_farm_state_id == urf_active_state.user_role_farm_state_id
     ).first()
 
     if not user_role_farm:
@@ -331,7 +331,7 @@ def edit_collaborator_role(
     collaborator_role_farm = db.query(UserRoleFarm).filter(
         UserRoleFarm.user_id == collaborator.user_id,
         UserRoleFarm.farm_id == farm_id,
-        UserRoleFarm.user_farm_role_state_id == urf_active_state.user_farm_role_state_id
+        UserRoleFarm.user_role_farm_state_id == urf_active_state.user_role_farm_state_id
     ).first()
 
     if not collaborator_role_farm:
@@ -540,13 +540,13 @@ def delete_collaborator(
             status_code=400
         )
 
-    logger.info(f"Estado 'Activo' encontrado: {urf_active_state.name} (ID: {urf_active_state.user_farm_role_state_id})") # Use correct ID field
+    logger.info(f"Estado 'Activo' encontrado: {urf_active_state.name} (ID: {urf_active_state.user_role_farm_state_id})") # Use correct ID field
 
     # 5. Obtener la asociación UserRoleFarm del usuario con la finca
     user_role_farm = db.query(UserRoleFarm).filter(
         UserRoleFarm.user_id == user.user_id,
         UserRoleFarm.farm_id == farm_id,
-        UserRoleFarm.user_farm_role_state_id == urf_active_state.user_farm_role_state_id
+        UserRoleFarm.user_role_farm_state_id == urf_active_state.user_role_farm_state_id
     ).first()
 
     if not user_role_farm:
@@ -585,7 +585,7 @@ def delete_collaborator(
     collaborator_role_farm = db.query(UserRoleFarm).filter(
         UserRoleFarm.user_id == collaborator.user_id,
         UserRoleFarm.farm_id == farm_id,
-        UserRoleFarm.user_farm_role_state_id == urf_active_state.user_farm_role_state_id
+        UserRoleFarm.user_role_farm_state_id == urf_active_state.user_role_farm_state_id
     ).first()
 
     if not collaborator_role_farm:
@@ -673,7 +673,7 @@ def delete_collaborator(
                 status_code=500
             )
 
-        collaborator_role_farm.user_farm_role_state_id = urf_inactive_state.user_farm_role_state_id
+        collaborator_role_farm.user_role_farm_state_id = urf_inactive_state.user_role_farm_state_id
         db.commit()
         logger.info(f"Colaborador {collaborator.name} eliminado de la finca ID {farm_id} exitosamente")
     except Exception as e:

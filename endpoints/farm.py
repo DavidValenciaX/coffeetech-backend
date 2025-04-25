@@ -125,7 +125,7 @@ def create_farm(request: CreateFarmRequest, session_token: str, db: Session = De
         Farm.name == request.name,
         UserRoleFarm.user_id == user.user_id,
         Farm.farm_state_id == active_farm_state.farm_state_id,  # Filtrar solo por fincas activas
-        UserRoleFarm.user_farm_role_state_id == active_urf_state.user_farm_role_state_id  # Check if association is active
+        UserRoleFarm.user_role_farm_state_id == active_urf_state.user_role_farm_state_id  # Check if association is active
     ).first()
 
     if existing_farm:
@@ -174,7 +174,7 @@ def create_farm(request: CreateFarmRequest, session_token: str, db: Session = De
             user_id=user.user_id,
             farm_id=new_farm.farm_id,
             role_id=role.role_id,
-            user_farm_role_state_id=active_urf_state.user_farm_role_state_id  # Use looked-up state ID
+            user_role_farm_state_id=active_urf_state.user_role_farm_state_id  # Use looked-up state ID
         )
         db.add(user_role_farm)
         db.commit()
@@ -249,7 +249,7 @@ def list_farm(session_token: str, db: Session = Depends(get_db_session)):
             Role, UserRoleFarm.role_id == Role.role_id
         ).filter(
             UserRoleFarm.user_id == user.user_id,
-            UserRoleFarm.user_farm_role_state_id == active_urf_state.user_farm_role_state_id,
+            UserRoleFarm.user_role_farm_state_id == active_urf_state.user_role_farm_state_id,
             Farm.farm_state_id == active_farm_state.farm_state_id
         ).all()
 
@@ -320,7 +320,7 @@ def update_farm(request: UpdateFarmRequest, session_token: str, db: Session = De
     user_role_farm = db.query(UserRoleFarm).join(Farm).filter(
         UserRoleFarm.farm_id == request.farm_id,
         UserRoleFarm.user_id == user.user_id,
-        UserRoleFarm.user_farm_role_state_id == active_urf_state.user_farm_role_state_id,
+        UserRoleFarm.user_role_farm_state_id == active_urf_state.user_role_farm_state_id,
         Farm.farm_state_id == active_farm_state.farm_state_id
     ).first()
 
@@ -372,7 +372,7 @@ def update_farm(request: UpdateFarmRequest, session_token: str, db: Session = De
                 UserRoleFarm.user_id == user.user_id,
                 Role.name == "Propietario",  # Verificar que el usuario sea propietario
                 Farm.farm_state_id == active_farm_state.farm_state_id,
-                UserRoleFarm.user_farm_role_state_id == active_urf_state.user_farm_role_state_id
+                UserRoleFarm.user_role_farm_state_id == active_urf_state.user_role_farm_state_id
             ).first()
 
             if existing_farm:
@@ -449,7 +449,7 @@ def get_farm(farm_id: int, session_token: str, db: Session = Depends(get_db_sess
             Role, UserRoleFarm.role_id == Role.role_id
         ).filter(
             UserRoleFarm.user_id == user.user_id,
-            UserRoleFarm.user_farm_role_state_id == active_urf_state.user_farm_role_state_id,
+            UserRoleFarm.user_role_farm_state_id == active_urf_state.user_role_farm_state_id,
             Farm.farm_state_id == active_farm_state.farm_state_id,
             Farm.farm_id == farm_id
         ).first()
@@ -520,7 +520,7 @@ def delete_farm(farm_id: int, session_token: str, db: Session = Depends(get_db_s
     user_role_farm = db.query(UserRoleFarm).join(Farm).filter(
         UserRoleFarm.user_id == user.user_id,
         UserRoleFarm.farm_id == farm_id,
-        UserRoleFarm.user_farm_role_state_id == active_urf_state.user_farm_role_state_id,
+        UserRoleFarm.user_role_farm_state_id == active_urf_state.user_role_farm_state_id,
         Farm.farm_state_id == active_farm_state.farm_state_id
     ).first()
 
@@ -563,7 +563,7 @@ def delete_farm(farm_id: int, session_token: str, db: Session = Depends(get_db_s
 
         user_role_farms = db.query(UserRoleFarm).filter(UserRoleFarm.farm_id == farm_id).all()
         for urf in user_role_farms:
-            urf.user_farm_role_state_id = inactive_urf_state.user_farm_role_state_id
+            urf.user_role_farm_state_id = inactive_urf_state.user_role_farm_state_id
 
         db.commit()
         logger.info("Finca y relaciones en user_role_farm puestas en estado 'Inactiva' para la finca con ID %s", farm_id)

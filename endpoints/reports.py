@@ -132,7 +132,7 @@ def financial_report(
         user_role_farm = db.query(UserRoleFarm).filter(
             UserRoleFarm.user_id == user.user_id,
             UserRoleFarm.farm_id == farm_id,
-            UserRoleFarm.user_farm_role_state_id == active_urf_state.user_farm_role_state_id
+            UserRoleFarm.user_role_farm_state_id == active_urf_state.user_role_farm_state_id
         ).first()
         
         if not user_role_farm:
