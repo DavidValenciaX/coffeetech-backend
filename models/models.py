@@ -58,6 +58,7 @@ class AreaUnits(Base):
     name = Column(String(255), nullable=False, unique=True)
     abbreviation = Column(String(10), nullable=False, unique=True)
     farms = relationship("Farms", back_populates="area_unit")
+    plots = relationship("Plots", back_populates="area_unit")
 
 class UserStates(Base):
     __tablename__ = 'user_states'
