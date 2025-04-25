@@ -5,13 +5,13 @@ from sqlalchemy.ext.declarative import declarative_base
 
 Base = declarative_base()
 
-class FarmState(Base):
+class FarmStates(Base):
     __tablename__ = 'farm_states'
     farm_state_id = Column(Integer, primary_key=True)
     name = Column(String(45), nullable=False, unique=True)
-    farms = relationship("Farm", back_populates="state")
+    farms = relationship("Farms", back_populates="state")
 
-class Farm(Base):
+class Farms(Base):
     __tablename__ = 'farms'
 
     farm_id = Column(Integer, primary_key=True, index=True)
@@ -22,17 +22,18 @@ class Farm(Base):
     __table_args__ = (CheckConstraint('area > 0', name='check_area_positive'),)
 
     # Relaciones
-    area_unit = relationship("AreaUnit")
-    state = relationship("FarmState")
-    invitations = relationship("Invitation", back_populates="farm")
+    area_unit = relationship("AreaUnits")
+    state = relationship("FarmStates")
+    invitations = relationship("Invitations", back_populates="farm")
     user_roles_farms = relationship('UserRoleFarm', back_populates='farm')
-    plots = relationship("Plot", back_populates="farm")
-    notifications = relationship("Notification", back_populates="farm")
+    plots = relationship("Plots", back_populates="farm")
+    notifications = relationship("Notifications", back_populates="farm")
 
-class UserRoleFarmState(Base):
+class UserRoleFarmStates(Base):
     __tablename__ = 'user_role_farm_states'
     user_role_farm_state_id = Column(Integer, primary_key=True)
     name = Column(String(45), nullable=False, unique=True)
+    user_role_farm = relationship("UserRoleFarm", back_populates="state")
 
 class UserRoleFarm(Base):
     __tablename__ = 'user_role_farm'
@@ -45,25 +46,26 @@ class UserRoleFarm(Base):
     __table_args__ = (UniqueConstraint('user_id', 'role_id', 'farm_id'),)
 
     # Relaciones
-    user = relationship('User', back_populates='user_roles_farms')
-    farm = relationship('Farm', back_populates='user_roles_farms')
-    role = relationship('Role', back_populates='user_roles_farms')
-    state = relationship('UserFarmRoleState')
+    user = relationship('Users', back_populates='user_roles_farms')
+    farm = relationship('Farms', back_populates='user_roles_farms')
+    role = relationship('Roles', back_populates='user_roles_farms')
+    state = relationship('UserRoleFarmStates', back_populates='user_role_farm')
 
-class AreaUnit(Base):
+class AreaUnits(Base):
     __tablename__ = 'area_units'
 
     area_unit_id = Column(Integer, primary_key=True)
     name = Column(String(255), nullable=False, unique=True)
     abbreviation = Column(String(10), nullable=False, unique=True)
+    farms = relationship("Farms", back_populates="area_unit")
 
-class UserState(Base):
+class UserStates(Base):
     __tablename__ = 'user_states'
     user_state_id = Column(Integer, primary_key=True)
     name = Column(String(45), nullable=False, unique=True)
-    users = relationship("User", back_populates="state")
+    users = relationship("Users", back_populates="state")
 
-class User(Base):
+class Users(Base):
     __tablename__ = "users"
 
     user_id = Column(Integer, primary_key=True, index=True)
@@ -76,13 +78,13 @@ class User(Base):
     user_state_id = Column(Integer, ForeignKey("user_states.user_state_id"), nullable=False)
 
     # Relaciones
-    state = relationship("UserState", back_populates="users")
+    state = relationship("UserStates", back_populates="users")
     user_roles_farms = relationship('UserRoleFarm', back_populates='user')
-    notifications = relationship("Notification", back_populates="user")
-    created_transactions = relationship("Transaction", back_populates="creator")
-    created_invitations = relationship("Invitation", foreign_keys="[Invitation.inviter_user_id]", back_populates="inviter")
+    notifications = relationship("Notifications", back_populates="user")
+    created_transactions = relationship("Transactions", back_populates="creator")
+    created_invitations = relationship("Invitations", foreign_keys="[Invitations.inviter_user_id]", back_populates="inviter")
 
-class Role(Base):
+class Roles(Base):
     __tablename__ = 'roles'
 
     role_id = Column(Integer, primary_key=True)
@@ -91,9 +93,9 @@ class Role(Base):
     # Relación con RolePermission
     permissions = relationship("RolePermission", back_populates="role")
     user_roles_farms = relationship('UserRoleFarm', back_populates='role')
-    invitations = relationship("Invitation", back_populates="suggested_role")
+    invitations = relationship("Invitations", back_populates="suggested_role")
 
-class Permission(Base):
+class Permissions(Base):
     __tablename__ = 'permissions'
 
     permission_id = Column(Integer, primary_key=True, index=True)
@@ -110,16 +112,16 @@ class RolePermission(Base):
     permission_id = Column(Integer, ForeignKey('permissions.permission_id'), primary_key=True, nullable=False)
 
     # Relaciones con Role y Permission
-    role = relationship("Role", back_populates="permissions")
-    permission = relationship("Permission", back_populates="roles")
+    role = relationship("Roles", back_populates="permissions")
+    permission = relationship("Permissions", back_populates="roles")
 
-class InvitationState(Base):
+class InvitationStates(Base):
     __tablename__ = 'invitation_states'
     invitation_state_id = Column(Integer, primary_key=True)
     name = Column(String(45), nullable=False, unique=True)
-    invitations = relationship("Invitation", back_populates="state")
+    invitations = relationship("Invitations", back_populates="state")
 
-class Invitation(Base):
+class Invitations(Base):
     __tablename__ = 'invitations'
     __table_args__ = (UniqueConstraint('email', 'farm_id'),)
 
@@ -132,28 +134,28 @@ class Invitation(Base):
     invitation_date = Column(DateTime(timezone=True), nullable=False, server_default=func.now())
 
     # Relaciones
-    farm = relationship("Farm", back_populates="invitations")
-    state = relationship('InvitationState', back_populates="invitations")
-    inviter = relationship("User", foreign_keys=[inviter_user_id], back_populates="created_invitations")
-    notifications = relationship("Notification", back_populates="invitation")
-    suggested_role = relationship('Role', back_populates="invitations")
+    farm = relationship("Farms", back_populates="invitations")
+    state = relationship('InvitationStates', back_populates="invitations")
+    inviter = relationship("Users", foreign_keys=[inviter_user_id], back_populates="created_invitations")
+    notifications = relationship("Notifications", back_populates="invitation")
+    suggested_role = relationship('Roles', back_populates="invitations")
 
-class NotificationState(Base):
+class NotificationStates(Base):
     __tablename__ = 'notification_states'
     notification_state_id = Column(Integer, primary_key=True)
     name = Column(String(45), nullable=False, unique=True)
-    notifications = relationship("Notification", back_populates="state")
+    notifications = relationship("Notifications", back_populates="state")
 
-class NotificationType(Base):
+class NotificationTypes(Base):
     __tablename__ = 'notification_types'
 
     notification_type_id = Column(Integer, primary_key=True)
     name = Column(String(255), nullable=False, unique=True)
 
     # Relación con Notification
-    notifications = relationship("Notification", back_populates="notification_type")
+    notifications = relationship("Notifications", back_populates="notification_type")
 
-class Notification(Base):
+class Notifications(Base):
     __tablename__ = 'notifications'
 
     notification_id = Column(Integer, primary_key=True)
@@ -166,28 +168,28 @@ class Notification(Base):
     farm_id = Column(Integer, ForeignKey('farms.farm_id'), nullable=True)
 
     # Relaciones
-    user = relationship("User", back_populates="notifications")
-    invitation = relationship("Invitation", back_populates="notifications")
-    farm = relationship("Farm", back_populates="notifications")
-    notification_type = relationship("NotificationType", back_populates="notifications")
-    state = relationship("NotificationState", back_populates="notifications")
+    user = relationship("Users", back_populates="notifications")
+    invitation = relationship("Invitations", back_populates="notifications")
+    farm = relationship("Farms", back_populates="notifications")
+    notification_type = relationship("NotificationTypes", back_populates="notifications")
+    state = relationship("NotificationStates", back_populates="notifications")
 
-class CoffeeVariety(Base):
+class CoffeeVarieties(Base):
     __tablename__ = 'coffee_varieties'
 
     coffee_variety_id = Column(Integer, primary_key=True, index=True)
     name = Column(String(255), nullable=False, unique=True)
 
     # Relaciones
-    plots = relationship("Plot", back_populates="coffee_variety")
+    plots = relationship("Plots", back_populates="coffee_variety")
 
-class PlotState(Base):
+class PlotStates(Base):
     __tablename__ = 'plot_states'
     plot_state_id = Column(Integer, primary_key=True)
     name = Column(String(45), nullable=False, unique=True)
-    plots = relationship("Plot", back_populates="state")
+    plots = relationship("Plots", back_populates="state")
 
-class Plot(Base):
+class Plots(Base):
     __tablename__ = 'plots'
     __table_args__ = (
         UniqueConstraint('name', 'farm_id'),
@@ -209,19 +211,19 @@ class Plot(Base):
     plot_state_id = Column(Integer, ForeignKey('plot_states.plot_state_id'), nullable=False)
 
     # Relaciones
-    farm = relationship("Farm", back_populates="plots")
-    coffee_variety = relationship("CoffeeVariety", back_populates="plots")
-    state = relationship("PlotState", back_populates="plots")
-    area_unit = relationship("AreaUnit")
-    transactions = relationship("Transaction", back_populates="plot")
-    
-class TransactionState(Base):
+    farm = relationship("Farms", back_populates="plots")
+    coffee_variety = relationship("CoffeeVarieties", back_populates="plots")
+    state = relationship("PlotStates", back_populates="plots")
+    area_unit = relationship("AreaUnits", back_populates="plots")
+    transactions = relationship("Transactions", back_populates="plot")
+
+class TransactionStates(Base):
     __tablename__ = 'transaction_states'
     transaction_state_id = Column(Integer, primary_key=True)
     name = Column(String(45), nullable=False, unique=True)
-    transactions = relationship("Transaction", back_populates="state")
+    transactions = relationship("Transactions", back_populates="state")
 
-class TransactionCategory(Base):
+class TransactionCategories(Base):
     __tablename__ = 'transaction_categories'
     __table_args__ = (UniqueConstraint('name', 'transaction_type_id'),)
 
@@ -230,19 +232,19 @@ class TransactionCategory(Base):
     transaction_type_id = Column(Integer, ForeignKey('transaction_types.transaction_type_id'), nullable=False)
 
     # Relaciones
-    transaction_type = relationship("TransactionType", back_populates="categories")
-    transactions = relationship("Transaction", back_populates="transaction_category")
+    transaction_type = relationship("TransactionTypes", back_populates="categories")
+    transactions = relationship("Transactions", back_populates="transaction_category")
 
-class TransactionType(Base):
+class TransactionTypes(Base):
     __tablename__ = 'transaction_types'
 
     transaction_type_id = Column(Integer, primary_key=True)
     name = Column(String(255), nullable=False, unique=True)
 
     # Relaciones
-    categories = relationship("TransactionCategory", back_populates="transaction_type")
+    categories = relationship("TransactionCategories", back_populates="transaction_type")
 
-class Transaction(Base):
+class Transactions(Base):
     __tablename__ = 'transactions'
 
     transaction_id = Column(Integer, primary_key=True)
@@ -255,7 +257,7 @@ class Transaction(Base):
     creator_id = Column(Integer, ForeignKey('users.user_id'), nullable=False)
 
     # Relaciones
-    plot = relationship("Plot", back_populates="transactions")
-    transaction_category = relationship("TransactionCategory", back_populates="transactions")
-    state = relationship("TransactionState", back_populates="transactions")
-    creator = relationship("User", back_populates="created_transactions")
+    plot = relationship("Plots", back_populates="transactions")
+    transaction_category = relationship("TransactionCategories", back_populates="transactions")
+    state = relationship("TransactionStates", back_populates="transactions")
+    creator = relationship("Users", back_populates="created_transactions")
