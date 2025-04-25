@@ -305,9 +305,9 @@ def edit_transaction(
         db.commit()
         db.refresh(transaction)
         
-        # Obtener el estado actual
-        status = get_state(db, None, "Transaction", transaction.status_id) # Assuming get_state can fetch by ID
-        status_name = status.name if status else "Desconocido"
+        # Obtener el estado actual directamente por ID
+        transaction_current_state = db.query(TransactionState).filter(TransactionState.transaction_state_id == transaction.transaction_state_id).first()
+        transaction_state_name = transaction_current_state.name if transaction_current_state else "Desconocido"
         
         # Obtener el tipo de transacción actualizado
         txn_type = db.query(TransactionType).filter(TransactionType.transaction_type_id == transaction.transaction_type_id).first()
@@ -321,11 +321,11 @@ def edit_transaction(
             transaction_id=transaction.transaction_id,
             plot_id=transaction.plot_id,
             transaction_type_name=txn_type_name,
-            transaction_category_name=txn_category_name,  # Incluir categoría
+            transaction_category_name=txn_category_name,
             description=transaction.description,
             value=transaction.value,
             transaction_date=transaction.transaction_date,
-            transaction_state=status_name
+            transaction_state=transaction_state_name
         )
         
         response_dict = jsonable_encoder(response_data.dict())
