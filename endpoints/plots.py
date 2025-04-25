@@ -7,7 +7,7 @@ from dataBase import get_db_session
 import logging
 from utils.response import session_token_invalid_response
 from utils.response import create_response
-from utils.status import get_state
+from utils.state import get_state
 
 router = APIRouter()
 
@@ -60,24 +60,24 @@ def create_plot(request: CreatePlotRequest, session_token: str, db: Session = De
         return session_token_invalid_response()
 
     # Obtener los estados "Activo" para Farm y UserRoleFarm
-    active_farm_status = get_state(db, "Activo", "Farm")
-    if not active_farm_status:
+    active_farm_state = get_state(db, "Activo", "Farm")
+    if not active_farm_state:
         logger.error("No se encontró el estado 'Activo' para el tipo 'Farm'")
         return create_response("error", "No se encontró el estado 'Activo' para el tipo 'Farm'", status_code=400)
 
-    active_urf_status = get_state(db, "Activo", "user_role_farm")
-    if not active_urf_status:
+    active_urf_state = get_state(db, "Activo", "user_role_farm")
+    if not active_urf_state:
         logger.error("No se encontró el estado 'Activo' para el tipo 'user_role_farm'")
         return create_response("error", "No se encontró el estado 'Activo' para el tipo 'user_role_farm'", status_code=400)
 
     # Obtener el estado "Activo" para Plot
-    active_plot_status = get_state(db, "Activo", "Plot")
-    if not active_plot_status:
+    active_plot_state = get_state(db, "Activo", "Plot")
+    if not active_plot_state:
         logger.error("No se encontró el estado 'Activo' para el tipo 'Plot'")
         return create_response("error", "No se encontró el estado 'Activo' para el tipo 'Plot'", status_code=400)
 
     # Verificar que la finca existe y está activa
-    farm = db.query(Farm).filter(Farm.farm_id == request.farm_id, Farm.farm_status_id == active_farm_status.status_id).first()
+    farm = db.query(Farm).filter(Farm.farm_id == request.farm_id, Farm.farm_state_id == active_farm_state.farm_state_id).first()
     if not farm:
         logger.warning("La finca con ID %s no existe o no está activa", request.farm_id)
         return create_response("error", "La finca no existe o no está activa")
@@ -86,8 +86,9 @@ def create_plot(request: CreatePlotRequest, session_token: str, db: Session = De
     user_role_farm = db.query(UserRoleFarm).filter(
         UserRoleFarm.user_id == user.user_id,
         UserRoleFarm.farm_id == request.farm_id,
-        UserRoleFarm.user_farm_role_status_id == active_urf_status.user_farm_role_status_id
+        UserRoleFarm.user_farm_role_state_id == active_urf_state.user_farm_role_state_id
     ).first()
+    
     if not user_role_farm:
         logger.warning("El usuario no está asociado con la finca con ID %s", request.farm_id)
         return create_response("error", "No tienes permiso para agregar un lote en esta finca")
@@ -113,7 +114,7 @@ def create_plot(request: CreatePlotRequest, session_token: str, db: Session = De
     existing_plot = db.query(Plot).filter(
         Plot.name == request.name,
         Plot.farm_id == request.farm_id,
-        Plot.status_id == active_plot_status.status_id  # Corregido a active_plot_status
+        Plot.plot_state_id == active_plot_state.plot_state_id
     ).first()
     if existing_plot:
         logger.warning("Ya existe un lote con el nombre '%s' en la finca con ID %s", request.name, request.farm_id)
@@ -134,7 +135,7 @@ def create_plot(request: CreatePlotRequest, session_token: str, db: Session = De
             longitude=request.longitude,
             altitude=request.altitude,
             farm_id=request.farm_id,
-            status_id=active_plot_status.status_id
+            plot_state_id=active_plot_state.plot_state_id
         )
         db.add(new_plot)
         db.commit()
@@ -176,13 +177,13 @@ def update_plot_general_info(request: UpdatePlotGeneralInfoRequest, session_toke
         return session_token_invalid_response()
 
     # Obtener el estado "Activo" para Plot
-    active_plot_status = get_state(db, "Activo", "Plot")
-    if not active_plot_status:
+    active_plot_state = get_state(db, "Activo", "Plot")
+    if not active_plot_state:
         logger.error("No se encontró el estado 'Activo' para el tipo 'Plot'")
         return create_response("error", "No se encontró el estado 'Activo' para el tipo 'Plot'", status_code=400)
 
     # Obtener el lote
-    plot = db.query(Plot).filter(Plot.plot_id == request.plot_id, Plot.status_id == active_plot_status.status_id).first()
+    plot = db.query(Plot).filter(Plot.plot_id == request.plot_id, Plot.plot_state_id == active_plot_state.plot_state_id).first()
     if not plot:
         logger.warning("El lote con ID %s no existe o no está activo", request.plot_id)
         return create_response("error", "El lote no existe o no está activo")
@@ -194,8 +195,8 @@ def update_plot_general_info(request: UpdatePlotGeneralInfoRequest, session_toke
         return create_response("error", "La finca asociada al lote no existe")
 
     # Obtener el estado "Activo" para UserRoleFarm
-    active_urf_status = get_state(db, "Activo", "user_role_farm")
-    if not active_urf_status:
+    active_urf_state = get_state(db, "Activo", "user_role_farm")
+    if not active_urf_state:
         logger.error("No se encontró el estado 'Activo' para el tipo 'user_role_farm'")
         return create_response("error", "No se encontró el estado 'Activo' para el tipo 'user_role_farm'", status_code=400)
 
@@ -203,7 +204,7 @@ def update_plot_general_info(request: UpdatePlotGeneralInfoRequest, session_toke
     user_role_farm = db.query(UserRoleFarm).filter(
         UserRoleFarm.user_id == user.user_id,
         UserRoleFarm.farm_id == farm.farm_id,
-        UserRoleFarm.user_farm_role_status_id == active_urf_status.user_farm_role_status_id
+        UserRoleFarm.user_farm_role_state_id == active_urf_state.user_farm_role_state_id
     ).first()
     if not user_role_farm:
         logger.warning("El usuario no está asociado con la finca con ID %s", farm.farm_id)
@@ -231,7 +232,7 @@ def update_plot_general_info(request: UpdatePlotGeneralInfoRequest, session_toke
         Plot.name == request.name,
         Plot.farm_id == farm.farm_id,
         Plot.plot_id != request.plot_id,
-        Plot.status_id == active_plot_status.status_id  # Aseguramos que sea el estado activo del lote
+        Plot.plot_state_id == active_plot_state.plot_state_id  # Aseguramos que sea el estado activo del lote
     ).first()
     if existing_plot:
         logger.warning("Ya existe un lote con el nombre '%s' en la finca con ID %s", request.name, farm.farm_id)
@@ -281,13 +282,13 @@ def update_plot_location(request: UpdatePlotLocationRequest, session_token: str,
         return session_token_invalid_response()
 
     # Obtener el estado "Activo" para Plot
-    active_plot_status = get_state(db, "Activo", "Plot")
-    if not active_plot_status:
+    active_plot_state = get_state(db, "Activo", "Plot")
+    if not active_plot_state:
         logger.error("No se encontró el estado 'Activo' para el tipo 'Plot'")
         return create_response("error", "No se encontró el estado 'Activo' para el tipo 'Plot'", status_code=400)
 
     # Obtener el lote
-    plot = db.query(Plot).filter(Plot.plot_id == request.plot_id, Plot.status_id == active_plot_status.status_id).first()
+    plot = db.query(Plot).filter(Plot.plot_id == request.plot_id, Plot.plot_state_id == active_plot_state.plot_state_id).first()
     if not plot:
         logger.warning("El lote con ID %s no existe o no está activo", request.plot_id)
         return create_response("error", "El lote no existe o no está activo")
@@ -299,8 +300,8 @@ def update_plot_location(request: UpdatePlotLocationRequest, session_token: str,
         return create_response("error", "La finca asociada al lote no existe")
 
     # Obtener el estado "Activo" para UserRoleFarm
-    active_urf_status = get_state(db, "Activo", "user_role_farm")
-    if not active_urf_status:
+    active_urf_state = get_state(db, "Activo", "user_role_farm")
+    if not active_urf_state:
         logger.error("No se encontró el estado 'Activo' para el tipo 'user_role_farm'")
         return create_response("error", "No se encontró el estado 'Activo' para el tipo 'user_role_farm'", status_code=400)
 
@@ -308,7 +309,7 @@ def update_plot_location(request: UpdatePlotLocationRequest, session_token: str,
     user_role_farm = db.query(UserRoleFarm).filter(
         UserRoleFarm.user_id == user.user_id,
         UserRoleFarm.farm_id == farm.farm_id,
-        UserRoleFarm.user_farm_role_status_id == active_urf_status.user_farm_role_status_id
+        UserRoleFarm.user_farm_role_state_id == active_urf_state.user_farm_role_state_id
     ).first()
     if not user_role_farm:
         logger.warning("El usuario no está asociado con la finca con ID %s", farm.farm_id)
@@ -364,12 +365,12 @@ def list_plots(farm_id: int, session_token: str, db: Session = Depends(get_db_se
         return session_token_invalid_response()
 
     # Obtener los estados "Activo"
-    active_farm_status = get_state(db, "Activo", "Farm")
-    active_urf_status = get_state(db, "Activo", "user_role_farm")
-    active_plot_status = get_state(db, "Activo", "Plot")
+    active_farm_state = get_state(db, "Activo", "Farm")
+    active_urf_state = get_state(db, "Activo", "user_role_farm")
+    active_plot_state = get_state(db, "Activo", "Plot")
 
     # Verificar que la finca existe y está activa
-    farm = db.query(Farm).filter(Farm.farm_id == farm_id, Farm.status_id == active_farm_status.status_id).first()
+    farm = db.query(Farm).filter(Farm.farm_id == farm_id, Farm.farm_state_id == active_farm_state.farm_state_id).first()
     if not farm:
         logger.warning("La finca con ID %s no existe o no está activa", farm_id)
         return create_response("error", "La finca no existe o no está activa")
@@ -378,7 +379,7 @@ def list_plots(farm_id: int, session_token: str, db: Session = Depends(get_db_se
     user_role_farm = db.query(UserRoleFarm).filter(
         UserRoleFarm.user_id == user.user_id,
         UserRoleFarm.farm_id == farm_id,
-        UserRoleFarm.user_farm_role_status_id == active_urf_status.user_farm_role_status_id
+        UserRoleFarm.user_farm_role_state_id == active_urf_state.user_farm_role_state_id
     ).first()
     if not user_role_farm:
         logger.warning("El usuario no está asociado con la finca con ID %s", farm_id)
@@ -397,7 +398,7 @@ def list_plots(farm_id: int, session_token: str, db: Session = Depends(get_db_se
     try:
         plots = db.query(Plot).filter(
             Plot.farm_id == farm_id,
-            Plot.status_id == active_plot_status.status_id
+            Plot.plot_state_id == active_plot_state.plot_state_id
         ).all()
 
         plot_list = []
@@ -443,18 +444,18 @@ def get_plot(plot_id: int, session_token: str, db: Session = Depends(get_db_sess
         return session_token_invalid_response()
 
     # Obtener los estados "Activo"
-    active_plot_status = get_state(db, "Activo", "Plot")
-    active_farm_status = get_state(db, "Activo", "Farm")
-    active_urf_status = get_state(db, "Activo", "user_role_farm")
+    active_plot_state = get_state(db, "Activo", "Plot")
+    active_farm_state = get_state(db, "Activo", "Farm")
+    active_urf_state = get_state(db, "Activo", "user_role_farm")
 
     # Obtener el lote
-    plot = db.query(Plot).filter(Plot.plot_id == plot_id, Plot.status_id == active_plot_status.status_id).first()
+    plot = db.query(Plot).filter(Plot.plot_id == plot_id, Plot.plot_state_id == active_plot_state.plot_state_id).first()
     if not plot:
         logger.warning("El lote con ID %s no existe o no está activo", plot_id)
         return create_response("error", "El lote no existe o no está activo")
 
     # Obtener la finca asociada al lote
-    farm = db.query(Farm).filter(Farm.farm_id == plot.farm_id, Farm.status_id == active_farm_status.status_id).first()
+    farm = db.query(Farm).filter(Farm.farm_id == plot.farm_id, Farm.plot_state_id == active_farm_state.plot_state_id).first()
     if not farm:
         logger.warning("La finca asociada al lote no existe o no está activa")
         return create_response("error", "La finca asociada al lote no existe o no está activa")
@@ -463,7 +464,7 @@ def get_plot(plot_id: int, session_token: str, db: Session = Depends(get_db_sess
     user_role_farm = db.query(UserRoleFarm).filter(
         UserRoleFarm.user_id == user.user_id,
         UserRoleFarm.farm_id == farm.farm_id,
-        UserRoleFarm.user_farm_role_status_id == active_urf_status.user_farm_role_status_id
+        UserRoleFarm.user_farm_role_state_id == active_urf_state.user_farm_role_state_id
     ).first()
     if not user_role_farm:
         logger.warning("El usuario no está asociado con la finca con ID %s", farm.farm_id)
@@ -519,11 +520,11 @@ def delete_plot(plot_id: int, session_token: str, db: Session = Depends(get_db_s
         return create_response("error", "Token de sesión inválido o usuario no encontrado")
 
     # Obtener los estados "Activo" e "Inactivo" para Plot
-    active_plot_status = get_state(db, "Activo", "Plot")
-    inactive_plot_status = get_state(db, "Inactivo", "Plot")
+    active_plot_state = get_state(db, "Activo", "Plot")
+    inactive_plot_state = get_state(db, "Inactivo", "Plot")
 
     # Obtener el lote
-    plot = db.query(Plot).filter(Plot.plot_id == plot_id, Plot.status_id == active_plot_status.status_id).first()
+    plot = db.query(Plot).filter(Plot.plot_id == plot_id, Plot.plot_state_id == active_plot_state.plot_state_id).first()
     if not plot:
         logger.warning("El lote con ID %s no existe o no está activo", plot_id)
         return create_response("error", "El lote no existe o no está activo")
@@ -535,13 +536,13 @@ def delete_plot(plot_id: int, session_token: str, db: Session = Depends(get_db_s
         return create_response("error", "La finca asociada al lote no existe")
 
     # Obtener el estado "Activo" para UserRoleFarm
-    active_urf_status = get_state(db, "Activo", "user_role_farm")
+    active_urf_state = get_state(db, "Activo", "user_role_farm")
 
     # Verificar si el usuario tiene un rol en la finca
     user_role_farm = db.query(UserRoleFarm).filter(
         UserRoleFarm.user_id == user.user_id,
         UserRoleFarm.farm_id == farm.farm_id,
-        UserRoleFarm.user_farm_role_status_id == active_urf_status.user_farm_role_status_id
+        UserRoleFarm.user_farm_role_state_id == active_urf_state.user_farm_role_state_id
     ).first()
     if not user_role_farm:
         logger.warning("El usuario no está asociado con la finca con ID %s", farm.farm_id)
@@ -558,7 +559,7 @@ def delete_plot(plot_id: int, session_token: str, db: Session = Depends(get_db_s
 
     # Cambiar el estado del lote a 'Inactivo'
     try:
-        plot.status_id = inactive_plot_status.status_id
+        plot.plot_state_id = inactive_plot_state.plot_state_id
         db.commit()
         logger.info("Lote con ID %s puesto en estado 'Inactivo'", plot.plot_id)
         return create_response("success", "Lote eliminado correctamente")

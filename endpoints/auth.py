@@ -11,7 +11,7 @@ from utils.response import create_response
 from dataBase import get_db_session
 import datetime
 import logging
-from utils.status import get_state
+from utils.state import get_state
 import pytz
 
 bogota_tz = pytz.timezone("America/Bogota")

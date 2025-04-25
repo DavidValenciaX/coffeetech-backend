@@ -9,7 +9,7 @@ from dataBase import get_db_session
 import logging
 from typing import Optional
 from utils.response import session_token_invalid_response, create_response
-from utils.status import get_state
+from utils.state import get_state
 from datetime import date
 import pytz
 from fastapi.encoders import jsonable_encoder
@@ -49,12 +49,12 @@ class TransactionResponse(BaseModel):
     transaction_id: int
     plot_id: int
     transaction_type_name: str
-    transaction_category_name: str  # Nuevo campo
+    transaction_category_name: str
 
     description: Optional[str]
     value: int
     transaction_date: date
-    status: str
+    transaction_state: str
 
 # Endpoint to Create a Transaction
 @router.post("/create-transaction")
@@ -85,14 +85,14 @@ def create_transaction(
         return session_token_invalid_response()
     
     # 3. Verificar que el usuario tenga permiso 'add_transaction'
-    active_urf_status = get_state(db, "Activo", "user_role_farm")
-    if not active_urf_status:
+    active_urf_state = get_state(db, "Activo", "user_role_farm")
+    if not active_urf_state:
         logger.error("Estado 'Activo' para user_role_farm no encontrado")
         return create_response("error", "Estado 'Activo' para user_role_farm no encontrado", status_code=400)
     
     user_role_farm = db.query(UserRoleFarm).filter(
         UserRoleFarm.user_id == user.user_id,
-        UserRoleFarm.user_farm_role_status_id == active_urf_status.user_farm_role_status_id # Changed status_id
+        UserRoleFarm.user_farm_role_state_id == active_urf_state.user_farm_role_state_id
     ).first()
     
     if not user_role_farm:
@@ -110,14 +110,14 @@ def create_transaction(
         return create_response("error", "No tienes permiso para agregar transacciones", status_code=403)
     
     # 4. Verificar que el lote existe y está activo
-    active_plot_status = get_state(db, "Activo", "Plot")
-    if not active_plot_status:
+    active_plot_state = get_state(db, "Activo", "Plot")
+    if not active_plot_state:
         logger.error("Estado 'Activo' para Plot no encontrado")
         return create_response("error", "Estado 'Activo' para Plot no encontrado", status_code=500)
     
     plot = db.query(Plot).filter(
         Plot.plot_id == request.plot_id,
-        Plot.status_id == active_plot_status.status_id
+        Plot.plot_state_id == active_plot_state.plot_state_id
     ).first()
     
     if not plot:
@@ -147,8 +147,8 @@ def create_transaction(
     
     
     # 9. Obtener el estado 'Activo' para Transaction
-    active_status = get_state(db, "Activo", "Transaction")
-    if not active_status:
+    active_transaction_state = get_state(db, "Activo", "Transaction")
+    if not active_transaction_state:
         logger.error("Estado 'Activo' para Transaction no encontrado")
         return create_response("error", "Estado 'Activo' para Transaction no encontrado", status_code=500)
     
@@ -161,7 +161,7 @@ def create_transaction(
             description=request.description,
             value=request.value,
             transaction_date=request.transaction_date,
-            status_id=active_status.status_id,
+            transaction_state_id=active_transaction_state.transaction_state_id,
             creador_id=user.user_id
         )
         db.add(new_transaction)
@@ -178,7 +178,7 @@ def create_transaction(
             description=new_transaction.description,
             value=new_transaction.value,
             transaction_date=new_transaction.transaction_date,
-            status=active_status.name
+            transaction_state=active_transaction_state.name
             )
         
         # Convertir a JSON serializable usando jsonable_encoder
@@ -226,25 +226,25 @@ def edit_transaction(
         return create_response("error", "La transacción especificada no existe", status_code=404)
     
     # 4. Verificar que la transacción no esté inactiva
-    inactive_status = get_state(db, "Inactivo", "Transaction")
-    if not inactive_status:
+    inactive_transaction_state = get_state(db, "Inactivo", "Transaction")
+    if not inactive_transaction_state:
         logger.error("Estado 'Inactivo' para Transaction no encontrado")
         return create_response("error", "Estado 'Inactivo' para Transaction no encontrado", status_code=500)
     
-    if transaction.status_id == inactive_status.status_id:
+    if transaction.transaction_state_id == inactive_transaction_state.transaction_state_id:
         logger.warning(f"La transacción con ID {request.transaction_id} está inactiva y no puede ser modificada")
         return create_response("error", "La transacción está inactiva y no puede ser modificada", status_code=403)
  
     # 5. Verificar que el usuario esté asociado con la finca del lote de la transacción
-    active_urf_status = get_state(db, "Activo", "user_role_farm")
-    if not active_urf_status:
+    active_urf_state = get_state(db, "Activo", "user_role_farm")
+    if not active_urf_state:
         logger.error("Estado 'Activo' para user_role_farm no encontrado")
         return create_response("error", "Estado 'Activo' para user_role_farm no encontrado", status_code=400)
     
     user_role_farm = db.query(UserRoleFarm).filter(
         UserRoleFarm.user_id == user.user_id,
         UserRoleFarm.farm_id == transaction.plot.farm_id,
-        UserRoleFarm.user_farm_role_status_id == active_urf_status.user_farm_role_status_id # Changed status_id
+        UserRoleFarm.user_farm_role_state_id == active_urf_state.user_farm_role_state_id
     ).first()
     
     if not user_role_farm:
@@ -325,7 +325,7 @@ def edit_transaction(
             description=transaction.description,
             value=transaction.value,
             transaction_date=transaction.transaction_date,
-            status=status_name
+            transaction_state=status_name
         )
         
         response_dict = jsonable_encoder(response_data.dict())
@@ -370,25 +370,25 @@ def delete_transaction(
         return create_response("error", "La transacción especificada no existe", status_code=404)
     
     # 4. Verificar que la transacción no esté ya inactiva
-    inactive_status = get_state(db, "Inactivo", "Transaction")
-    if not inactive_status:
+    inactive_transaction_state = get_state(db, "Inactivo", "Transaction")
+    if not inactive_transaction_state:
         logger.error("Estado 'Inactivo' para Transaction no encontrado")
         return create_response("error", "Estado 'Inactivo' para Transaction no encontrado", status_code=500)
     
-    if transaction.status_id == inactive_status.status_id:
+    if transaction.transaction_state_id == inactive_transaction_state.transaction_state_id:
         logger.warning(f"La transacción con ID {request.transaction_id} ya está inactiva")
         return create_response("error", "La transacción ya está eliminada", status_code=400)
     
     # 5. Verificar que el usuario esté asociado con la finca del lote de la transacción
-    active_urf_status = get_state(db, "Activo", "user_role_farm")
-    if not active_urf_status:
+    active_urf_state = get_state(db, "Activo", "user_role_farm")
+    if not active_urf_state:
         logger.error("Estado 'Activo' para user_role_farm no encontrado")
         return create_response("error", "Estado 'Activo' para user_role_farm no encontrado", status_code=400)
     
     user_role_farm = db.query(UserRoleFarm).filter(
         UserRoleFarm.user_id == user.user_id,
         UserRoleFarm.farm_id == transaction.plot.farm_id,
-        UserRoleFarm.user_farm_role_status_id == active_urf_status.user_farm_role_status_id # Changed status_id
+        UserRoleFarm.user_farm_role_state_id == active_urf_state.user_farm_role_state_id
     ).first()
     
     if not user_role_farm:
@@ -407,7 +407,7 @@ def delete_transaction(
     
     # 7. Cambiar el estado de la transacción a 'Inactivo'
     try:
-        transaction.status_id = inactive_status.status_id
+        transaction.transaction_state_id = inactive_transaction_state.transaction_state_id
         db.commit()
         logger.info(f"Transacción con ID {transaction.transaction_id} eliminada exitosamente")
         return create_response("success", "Transacción eliminada correctamente", data={"transaction_id": transaction.transaction_id})
@@ -442,14 +442,14 @@ def read_transactions(
         return session_token_invalid_response()
     
     # 3. Verificar que el lote exista y esté activo
-    active_plot_status = get_state(db, "Activo", "Plot")
-    if not active_plot_status:
+    active_plot_state = get_state(db, "Activo", "Plot")
+    if not active_plot_state:
         logger.error("Estado 'Activo' para Plot no encontrado")
         return create_response("error", "Estado 'Activo' para Plot no encontrado", status_code=400)
     
     plot = db.query(Plot).filter(
         Plot.plot_id == plot_id,
-        Plot.status_id == active_plot_status.status_id
+        Plot.plot_state_id == active_plot_state.plot_state_id
     ).first()
     if not plot:
         logger.warning(f"El lote con ID {plot_id} no existe o no está activo")
@@ -461,15 +461,15 @@ def read_transactions(
         logger.warning("La finca asociada al lote no existe")
         return create_response("error", "La finca asociada al lote no existe", status_code=404)
     
-    active_urf_status = get_state(db, "Activo", "user_role_farm")
-    if not active_urf_status:
+    active_urf_state = get_state(db, "Activo", "user_role_farm")
+    if not active_urf_state:
         logger.error("Estado 'Activo' para user_role_farm no encontrado")
         return create_response("error", "Estado 'Activo' para user_role_farm no encontrado", status_code=400)
     
     user_role_farm = db.query(UserRoleFarm).filter(
         UserRoleFarm.user_id == user.user_id,
         UserRoleFarm.farm_id == farm.farm_id,
-        UserRoleFarm.user_farm_role_status_id == active_urf_status.user_farm_role_status_id # Changed status_id
+        UserRoleFarm.user_farm_role_state_id == active_urf_state.user_farm_role_state_id
     ).first()
     
     if not user_role_farm:
@@ -486,15 +486,15 @@ def read_transactions(
         return create_response("error", "No tienes permiso para ver las transacciones en esta finca", status_code=403)
     
     # 6. Obtener el estado "Inactivo" para Transaction
-    inactive_transaction_status = get_state(db, "Inactivo", "Transaction")
-    if not inactive_transaction_status:
+    inactive_transaction_state = get_state(db, "Inactivo", "Transaction")
+    if not inactive_transaction_state:
         logger.error("Estado 'Inactivo' para Transaction no encontrado")
         return create_response("error", "Estado 'Inactivo' para Transaction no encontrado", status_code=500)
     
     # 7. Consultar las transacciones del lote que no están inactivas
     transactions = db.query(Transaction).filter(
         Transaction.plot_id == plot_id,
-        Transaction.status_id != inactive_transaction_status.status_id
+        Transaction.transaction_state_id != inactive_transaction_state.transaction_state_id
     ).all()
     
     # 8. Preparar la lista de transacciones
@@ -509,8 +509,8 @@ def read_transactions(
         txn_category_name = txn_category.name if txn_category else "Desconocido"
         
         # Obtener el estado de la transacción
-        status = db.query(TransactionState).filter(TransactionState.transaction_status_id == txn.status_id).first()
-        status_name = status.name if status else "Desconocido"
+        transaction_state = db.query(TransactionState).filter(TransactionState.transaction_state_id == txn.transaction_state_id).first()
+        transaction_state_name = transaction_state.name if transaction_state else "Desconocido"
         
         transaction_list.append({
             "transaction_id": txn.transaction_id,
@@ -520,7 +520,7 @@ def read_transactions(
             "description": txn.description,
             "value": txn.value,
             "transaction_date": txn.transaction_date.isoformat(),
-            "status": status_name
+            "transaction_state": transaction_state_name
         })
     
     if not transaction_list:

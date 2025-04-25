@@ -1,11 +1,15 @@
-from sqlalchemy import Column, Integer, BigInteger, String, Numeric, ForeignKey, DateTime, Date, Sequence, UniqueConstraint, CheckConstraint
+from sqlalchemy import Column, Integer, String, Numeric, ForeignKey, DateTime, Date, UniqueConstraint, CheckConstraint
 from sqlalchemy.sql import func
 from sqlalchemy.orm import relationship
 from sqlalchemy.ext.declarative import declarative_base
-from datetime import datetime
-import pytz
 
 Base = declarative_base()
+
+class FarmState(Base):
+    __tablename__ = 'farm_states'
+    farm_state_id = Column(Integer, primary_key=True)
+    name = Column(String(45), nullable=False, unique=True)
+    farms = relationship("Farm", back_populates="state")
 
 class Farm(Base):
     __tablename__ = 'farms'
@@ -25,8 +29,11 @@ class Farm(Base):
     plots = relationship("Plot", back_populates="farm")
     notifications = relationship("Notification", back_populates="farm")
 
+class UserFarmRoleState(Base):
+    __tablename__ = 'user_farm_role_states'
+    user_farm_role_state_id = Column(Integer, primary_key=True)
+    name = Column(String(45), nullable=False, unique=True)
 
-# Modelo para UserRoleFarm (relación entre usuarios, roles y fincas)
 class UserRoleFarm(Base):
     __tablename__ = 'user_role_farm'
 
@@ -43,21 +50,6 @@ class UserRoleFarm(Base):
     role = relationship('Role', back_populates='user_roles_farms')
     state = relationship('UserFarmRoleState')
 
-
-# Modelo para Role
-class Role(Base):
-    __tablename__ = 'roles'
-
-    role_id = Column(Integer, primary_key=True)
-    name = Column(String(255), nullable=False, unique=True)
-
-    # Relación con RolePermission
-    permissions = relationship("RolePermission", back_populates="role")
-    user_roles_farms = relationship('UserRoleFarm', back_populates='role')
-    invitations = relationship("Invitation", back_populates="suggested_role")
-
-
-# Modelo para AreaUnit
 class AreaUnit(Base):
     __tablename__ = 'area_units'
 
@@ -65,57 +57,12 @@ class AreaUnit(Base):
     name = Column(String(255), nullable=False, unique=True)
     abbreviation = Column(String(10), nullable=False, unique=True)
 
-
-# Definición del modelo para diversos estados
 class UserState(Base):
     __tablename__ = 'user_states'
     user_state_id = Column(Integer, primary_key=True)
     name = Column(String(45), nullable=False, unique=True)
     users = relationship("User", back_populates="state")
 
-
-class FarmState(Base):
-    __tablename__ = 'farm_states'
-    farm_state_id = Column(Integer, primary_key=True)
-    name = Column(String(45), nullable=False, unique=True)
-    farms = relationship("Farm", back_populates="state")
-
-
-class PlotState(Base):
-    __tablename__ = 'plot_states'
-    plot_state_id = Column(Integer, primary_key=True)
-    name = Column(String(45), nullable=False, unique=True)
-    plots = relationship("Plot", back_populates="state")
-
-
-class NotificationState(Base):
-    __tablename__ = 'notification_states'
-    notification_state_id = Column(Integer, primary_key=True)
-    name = Column(String(45), nullable=False, unique=True)
-    notifications = relationship("Notification", back_populates="state")
-
-
-class UserFarmRoleState(Base):
-    __tablename__ = 'user_farm_role_states'
-    user_farm_role_state_id = Column(Integer, primary_key=True)
-    name = Column(String(45), nullable=False, unique=True)
-
-
-class TransactionState(Base):
-    __tablename__ = 'transaction_states'
-    transaction_state_id = Column(Integer, primary_key=True)
-    name = Column(String(45), nullable=False, unique=True)
-    transactions = relationship("Transaction", back_populates="state")
-
-
-class InvitationState(Base):
-    __tablename__ = 'invitation_states'
-    invitation_state_id = Column(Integer, primary_key=True)
-    name = Column(String(45), nullable=False, unique=True)
-    invitations = relationship("Invitation", back_populates="state")
-
-
-# Definición del modelo User
 class User(Base):
     __tablename__ = "users"
 
@@ -135,8 +82,17 @@ class User(Base):
     created_transactions = relationship("Transaction", back_populates="creator")
     created_invitations = relationship("Invitation", foreign_keys="[Invitation.inviter_user_id]", back_populates="inviter")
 
+class Role(Base):
+    __tablename__ = 'roles'
 
-# Modelo para Permission
+    role_id = Column(Integer, primary_key=True)
+    name = Column(String(255), nullable=False, unique=True)
+
+    # Relación con RolePermission
+    permissions = relationship("RolePermission", back_populates="role")
+    user_roles_farms = relationship('UserRoleFarm', back_populates='role')
+    invitations = relationship("Invitation", back_populates="suggested_role")
+
 class Permission(Base):
     __tablename__ = 'permissions'
 
@@ -147,8 +103,6 @@ class Permission(Base):
     # Relación con RolePermission
     roles = relationship("RolePermission", back_populates="permission")
 
-
-# Modelo para RolePermission
 class RolePermission(Base):
     __tablename__ = 'role_permission'
 
@@ -159,8 +113,12 @@ class RolePermission(Base):
     role = relationship("Role", back_populates="permissions")
     permission = relationship("Permission", back_populates="roles")
 
+class InvitationState(Base):
+    __tablename__ = 'invitation_states'
+    invitation_state_id = Column(Integer, primary_key=True)
+    name = Column(String(45), nullable=False, unique=True)
+    invitations = relationship("Invitation", back_populates="state")
 
-# Modelo para Invitation
 class Invitation(Base):
     __tablename__ = 'invitations'
     __table_args__ = (UniqueConstraint('email', 'farm_id'),)
@@ -180,8 +138,12 @@ class Invitation(Base):
     notifications = relationship("Notification", back_populates="invitation")
     suggested_role = relationship('Role', back_populates="invitations")
 
+class NotificationState(Base):
+    __tablename__ = 'notification_states'
+    notification_state_id = Column(Integer, primary_key=True)
+    name = Column(String(45), nullable=False, unique=True)
+    notifications = relationship("Notification", back_populates="state")
 
-# Modelo para NotificationType
 class NotificationType(Base):
     __tablename__ = 'notification_types'
 
@@ -191,8 +153,6 @@ class NotificationType(Base):
     # Relación con Notification
     notifications = relationship("Notification", back_populates="notification_type")
 
-
-# Modelo para Notification
 class Notification(Base):
     __tablename__ = 'notifications'
 
@@ -212,16 +172,29 @@ class Notification(Base):
     notification_type = relationship("NotificationType", back_populates="notifications")
     state = relationship("NotificationState", back_populates="notifications")
 
+class CoffeeVariety(Base):
+    __tablename__ = 'coffee_varieties'
 
-# Modelo para Plot
+    coffee_variety_id = Column(Integer, primary_key=True, index=True)
+    name = Column(String(255), nullable=False, unique=True)
+
+    # Relaciones
+    plots = relationship("Plot", back_populates="coffee_variety")
+
+class PlotState(Base):
+    __tablename__ = 'plot_states'
+    plot_state_id = Column(Integer, primary_key=True)
+    name = Column(String(45), nullable=False, unique=True)
+    plots = relationship("Plot", back_populates="state")
+
 class Plot(Base):
     __tablename__ = 'plots'
     __table_args__ = (
         UniqueConstraint('name', 'farm_id'),
-        CheckConstraint('area > 0', name='check_area_positive'),
-        CheckConstraint('longitude BETWEEN -180 AND 180', name='check_longitude_range'),
-        CheckConstraint('latitude BETWEEN -90 AND 90', name='check_latitude_range'),
-        CheckConstraint('altitude >= 0 AND altitude <= 3000', name='check_altitude_range'),
+        CheckConstraint('area > 0'),
+        CheckConstraint('longitude BETWEEN -180 AND 180'),
+        CheckConstraint('latitude BETWEEN -90 AND 90'),
+        CheckConstraint('altitude >= 0 AND altitude <= 3000'),
     )
 
     plot_id = Column(Integer, primary_key=True, index=True)
@@ -241,20 +214,13 @@ class Plot(Base):
     state = relationship("PlotState", back_populates="plots")
     area_unit = relationship("AreaUnit")
     transactions = relationship("Transaction", back_populates="plot")
+    
+class TransactionState(Base):
+    __tablename__ = 'transaction_states'
+    transaction_state_id = Column(Integer, primary_key=True)
+    name = Column(String(45), nullable=False, unique=True)
+    transactions = relationship("Transaction", back_populates="state")
 
-
-# Modelo para CoffeeVariety
-class CoffeeVariety(Base):
-    __tablename__ = 'coffee_varieties'
-
-    coffee_variety_id = Column(Integer, primary_key=True, index=True)
-    name = Column(String(255), nullable=False, unique=True)
-
-    # Relaciones
-    plots = relationship("Plot", back_populates="coffee_variety")
-
-
-# Modelo para TransactionCategory
 class TransactionCategory(Base):
     __tablename__ = 'transaction_categories'
     __table_args__ = (UniqueConstraint('name', 'transaction_type_id'),)
@@ -267,8 +233,6 @@ class TransactionCategory(Base):
     transaction_type = relationship("TransactionType", back_populates="categories")
     transactions = relationship("Transaction", back_populates="transaction_category")
 
-
-# Modelo para TransactionType
 class TransactionType(Base):
     __tablename__ = 'transaction_types'
 
@@ -278,8 +242,6 @@ class TransactionType(Base):
     # Relaciones
     categories = relationship("TransactionCategory", back_populates="transaction_type")
 
-
-# Modelo para Transaction
 class Transaction(Base):
     __tablename__ = 'transactions'
 

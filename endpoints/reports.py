@@ -8,7 +8,7 @@ from dataBase import get_db_session
 import logging
 from typing import List, Optional
 from utils.response import create_response, session_token_invalid_response
-from utils.status import get_state
+from utils.state import get_state
 from pydantic import BaseModel, Field, conlist
 from datetime import date
 from fastapi.encoders import jsonable_encoder
@@ -124,15 +124,15 @@ def financial_report(
             return create_response("error", "La finca asociada a los lotes no existe", status_code=404)
         
         # 4. Verificar que el usuario esté asociado con esta finca y tenga permisos
-        active_urf_status = get_state(db, "Activo", "user_role_farm")
-        if not active_urf_status:
+        active_urf_state = get_state(db, "Activo", "user_role_farm")
+        if not active_urf_state:
             logger.error("Estado 'Activo' para user_role_farm no encontrado")
             return create_response("error", "Estado 'Activo' para user_role_farm no encontrado", status_code=500)
         
         user_role_farm = db.query(UserRoleFarm).filter(
             UserRoleFarm.user_id == user.user_id,
             UserRoleFarm.farm_id == farm_id,
-            UserRoleFarm.user_farm_role_status_id == active_urf_status.user_farm_role_status_id # Changed status_id
+            UserRoleFarm.user_farm_role_state_id == active_urf_state.user_farm_role_state_id
         ).first()
         
         if not user_role_farm:
@@ -150,8 +150,8 @@ def financial_report(
             return create_response("error", "No tienes permiso para ver reportes financieros", status_code=403)
         
         # 5. Obtener el estado 'Activo' para Transaction
-        active_transaction_status = get_state(db, "Activo", "Transaction")
-        if not active_transaction_status:
+        active_transaction_state = get_state(db, "Activo", "Transaction")
+        if not active_transaction_state:
             logger.error("Estado 'Activo' para Transaction no encontrado")
             return create_response("error", "Estado 'Activo' para Transaction no encontrado", status_code=500)
         
@@ -160,7 +160,7 @@ def financial_report(
             Transaction.plot_id.in_(request.plot_ids),
             Transaction.transaction_date >= request.fechaInicio,
             Transaction.transaction_date <= request.fechaFin,
-            Transaction.status_id == active_transaction_status.status_id
+            Transaction.transaction_state_id == active_transaction_state.transaction_state_id
         ).all()
         
         # 7. Procesar las transacciones para agregaciones

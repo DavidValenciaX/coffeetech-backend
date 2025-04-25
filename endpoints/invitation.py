@@ -8,7 +8,7 @@ from utils.FCM import send_fcm_notification
 from models.models import Farm, UserRoleFarm, User, Role, Permission, RolePermission, Invitation, Notification, UserFarmRoleState
 from utils.response import create_response
 from utils.response import session_token_invalid_response
-from utils.status import get_state
+from utils.state import get_state
 from models.models import NotificationType
 import pytz
 
