@@ -17,8 +17,6 @@ from fastapi.encoders import jsonable_encoder
 
 router = APIRouter()
 
-# Configuración de logging
-logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 bogota_tz = pytz.timezone("America/Bogota")

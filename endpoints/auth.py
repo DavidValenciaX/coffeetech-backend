@@ -13,8 +13,6 @@ import pytz
 
 bogota_tz = pytz.timezone("America/Bogota")
 
-# Configuración básica de logging
-logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 router = APIRouter()
@@ -351,15 +349,6 @@ Este endpoint permite restablecer la contraseña de un usuario, siempre que el t
     else:
         logger.warning("Token inválido o expirado: %s", reset.token)
         return create_response("error", "Token inválido o expirado")
-
-
-import logging
-
-# Configuración de logging
-logging.basicConfig(level=logging.INFO)
-logger = logging.getLogger(__name__)
-
-logger.info("Aplicación iniciada")
 
 @router.post("/login")
 def login(request: LoginRequest, db: Session = Depends(get_db_session)):

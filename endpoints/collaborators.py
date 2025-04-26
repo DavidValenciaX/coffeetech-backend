@@ -17,8 +17,6 @@ from sqlalchemy import func
 from utils.state import get_state
 import logging
 
-# Configuración básica de logging
-logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 router = APIRouter()

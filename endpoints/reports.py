@@ -16,8 +16,6 @@ from collections import defaultdict
 
 router = APIRouter()
 
-# Configuración de logging
-logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 # Modelos de Pydantic

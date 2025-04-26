@@ -11,8 +11,6 @@ from utils.state import get_state
 
 router = APIRouter()
 
-# Configuración de logging
-logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 # Modelos Pydantic para las solicitudes y respuestas

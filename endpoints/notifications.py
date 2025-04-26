@@ -9,8 +9,6 @@ from pydantic import BaseModel
 import logging
 from utils.response import create_response, session_token_invalid_response
 
-# Configurar el logger
-logging.basicConfig(level=logging.INFO)  # Cambia a DEBUG si necesitas más detalles
 logger = logging.getLogger(__name__)
 
 router = APIRouter()

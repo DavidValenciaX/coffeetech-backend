@@ -9,8 +9,6 @@ from utils.response import session_token_invalid_response
 from utils.response import create_response
 from utils.state import get_state
 
-# Configuración básica de logging
-logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 router = APIRouter()
