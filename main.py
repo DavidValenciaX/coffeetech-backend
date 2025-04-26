@@ -1,5 +1,5 @@
 from fastapi import FastAPI
-from endpoints import auth, utils, farm ,invitation, notification, collaborators, plots, transaction, reports
+from endpoints import auth, farms, invitations, notifications, transactions, utils, collaborators, plots, reports
 from dataBase import engine
 from models.models import Base
 import os
@@ -23,22 +23,22 @@ app.include_router(auth.router, prefix="/auth", tags=["Autenticación"])
 app.include_router(utils.router, prefix="/utils", tags=["Utilidades"])
 
 # Incluir las rutas de gestión de fincas
-app.include_router(farm.router, prefix="/farm", tags=["Fincas"])
+app.include_router(farms.router, prefix="/farm", tags=["Fincas"])
 
 # Incluir las rutas de invitaciones
-app.include_router(invitation.router, prefix="/invitation", tags=["Invitaciones"])
+app.include_router(invitations.router, prefix="/invitation", tags=["Invitaciones"])
 
 # Incluir las rutas de gestión de lotes
 app.include_router(plots.router, prefix="/plots", tags=["Lotes"])
 
 # Incluir las rutas de notificaciones
-app.include_router(notification.router, prefix="/notification", tags=["Notificaciones"])
+app.include_router(notifications.router, prefix="/notification", tags=["Notificaciones"])
 
 # Incluir las rutas de colaboradores
 app.include_router(collaborators.router, prefix="/collaborators", tags=["Collaborators"])
 
 # Incluir las rutas de transacciones
-app.include_router(transaction.router, prefix="/transaction", tags=["transaction"])
+app.include_router(transactions.router, prefix="/transaction", tags=["transaction"])
 
 app.include_router(reports.router, prefix="/reports", tags=["Reports"])
 
