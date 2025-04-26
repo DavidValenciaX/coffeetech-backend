@@ -34,9 +34,6 @@ if not firebase_admin._apps:  # Evitar inicializar Firebase múltiples veces
     cred = credentials.Certificate(temp_json_file_name)
     firebase_admin.initialize_app(cred)
 
-
-
-
 def send_fcm_notification(fcm_token: str, title: str, body: str):
     """
     Envía una notificación utilizando Firebase Cloud Messaging (FCM).

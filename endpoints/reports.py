@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
 from models.models import (
-    Transaction, Plot, User, Farm, UserRoleFarm, RolePermission, Permission
+    Transactions, Plots, Users, Farms, UserRoleFarm, RolePermission, Permissions
 )
 from utils.security import verify_session_token
 from dataBase import get_db_session
@@ -106,7 +106,7 @@ def financial_report(
     
     try:
         # 3. Obtener los lotes seleccionados
-        plots = db.query(Plot).filter(Plot.plot_id.in_(request.plot_ids)).all()
+        plots = db.query(Plots).filter(Plots.plot_id.in_(request.plot_ids)).all()
         if not plots:
             logger.warning("No se encontraron lotes con los IDs proporcionados")
             return create_response("error", "No se encontraron lotes con los IDs proporcionados", status_code=404)
@@ -118,7 +118,7 @@ def financial_report(
             return create_response("error", "Los lotes seleccionados pertenecen a diferentes fincas", status_code=400)
         
         farm_id = farm_ids.pop()
-        farm = db.query(Farm).filter(Farm.farm_id == farm_id).first()
+        farm = db.query(Farms).filter(Farms.farm_id == farm_id).first()
         if not farm:
             logger.warning("La finca asociada a los lotes no existe")
             return create_response("error", "La finca asociada a los lotes no existe", status_code=404)
@@ -140,27 +140,27 @@ def financial_report(
             return create_response("error", "No tienes permisos para ver reportes financieros de esta finca", status_code=403)
         
         # Verificar permiso 'read_financial_report'
-        role_permission = db.query(RolePermission).join(Permission).filter(
+        role_permission = db.query(RolePermission).join(Permissions).filter(
             RolePermission.role_id == user_role_farm.role_id,
-            Permission.name == "read_financial_report"
+            Permissions.name == "read_financial_report"
         ).first()
         
         if not role_permission:
             logger.warning(f"El rol {user_role_farm.role_id} del usuario no tiene permiso para ver reportes financieros")
             return create_response("error", "No tienes permiso para ver reportes financieros", status_code=403)
         
-        # 5. Obtener el estado 'Activo' para Transaction
-        active_transaction_state = get_state(db, "Activo", "Transaction")
+        # 5. Obtener el estado 'Activo' para Transactions
+        active_transaction_state = get_state(db, "Activo", "Transactions")
         if not active_transaction_state:
-            logger.error("Estado 'Activo' para Transaction no encontrado")
-            return create_response("error", "Estado 'Activo' para Transaction no encontrado", status_code=500)
+            logger.error("Estado 'Activo' para Transactions no encontrado")
+            return create_response("error", "Estado 'Activo' para Transactions no encontrado", status_code=500)
         
         # 6. Consultar las transacciones de los lotes seleccionados dentro del rango de fechas
-        transactions = db.query(Transaction).filter(
-            Transaction.plot_id.in_(request.plot_ids),
-            Transaction.transaction_date >= request.fechaInicio,
-            Transaction.transaction_date <= request.fechaFin,
-            Transaction.transaction_state_id == active_transaction_state.transaction_state_id
+        transactions = db.query(Transactions).filter(
+            Transactions.plot_id.in_(request.plot_ids),
+            Transactions.transaction_date >= request.fechaInicio,
+            Transactions.transaction_date <= request.fechaFin,
+            Transactions.transaction_state_id == active_transaction_state.transaction_state_id
         ).all()
         
         # 7. Procesar las transacciones para agregaciones
@@ -248,8 +248,8 @@ def financial_report(
             transaction_history = []
             for txn in transactions:
                 try:
-                    # Obtener el nombre del creador consultando la tabla User
-                    creator = db.query(User).filter(User.user_id == txn.creador_id).first()
+                    # Obtener el nombre del creador consultando la tabla Users
+                    creator = db.query(Users).filter(Users.user_id == txn.creador_id).first()
                     creator_name = creator.name if creator else "Desconocido"
 
                     history_item = TransactionHistoryItem(

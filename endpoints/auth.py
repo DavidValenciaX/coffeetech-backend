@@ -1,13 +1,10 @@
 from fastapi import APIRouter, HTTPException, Depends
 from pydantic import BaseModel, EmailStr
 from sqlalchemy.orm import Session
-from models.models import User
-
-
+from models.models import Users
 from utils.security import hash_password, generate_verification_token , verify_password
 from utils.email import send_email
-from utils.response import session_token_invalid_response
-from utils.response import create_response
+from utils.response import create_response, session_token_invalid_response
 from dataBase import get_db_session
 import datetime
 import logging
@@ -59,16 +56,16 @@ reset_tokens = {}
 
 
 # Función auxiliar para verificar tokens
-def verify_user_token(token: str, db: Session) -> User:
-    user = db.query(User).filter(User.verification_token == token).first()
+def verify_user_token(token: str, db: Session) -> Users:
+    user = db.query(Users).filter(Users.verification_token == token).first()
     if not user or (user.token_expiration and user.token_expiration < datetime.datetime.now(bogota_tz)):
         return None
     return user
 
 
 # Función auxiliar para verificar tokens de sesión
-def verify_session_token(session_token: str, db: Session) -> User:
-    user = db.query(User).filter(User.session_token == session_token).first()
+def verify_session_token(session_token: str, db: Session) -> Users:
+    user = db.query(Users).filter(Users.session_token == session_token).first()
     if not user:
         return None
     return user
@@ -115,7 +112,7 @@ def register_user(user: UserCreate, db: Session = Depends(get_db_session)):
     if not validate_password_strength(user.password):
         return create_response("error", "La contraseña debe tener al menos 8 caracteres, incluir una letra mayúscula, una letra minúscula, un número y un carácter especial")
     
-    db_user = db.query(User).filter(User.email == user.email).first()
+    db_user = db.query(Users).filter(Users.email == user.email).first()
     if db_user:
         return create_response("error", "El correo ya está registrado")
 
@@ -123,13 +120,13 @@ def register_user(user: UserCreate, db: Session = Depends(get_db_session)):
         password_hash = hash_password(user.password)
         verification_token = generate_verification_token(4)
 
-         # Usar get_state para obtener el estado "No Verificado" del tipo "User"
-        user_state_record = get_state(db, "No Verificado", "User")
+         # Usar get_state para obtener el estado "No Verificado" del tipo "Users"
+        user_state_record = get_state(db, "No Verificado", "Users")
         if not user_state_record:
-            return create_response("error", "No se encontró el estado 'No Verificado' para el tipo 'User'", status_code=400)
+            return create_response("error", "No se encontró el estado 'No Verificado' para el tipo 'Users'", status_code=400)
 
         # Crear el nuevo usuario con estado "No Verificado"
-        new_user = User(
+        new_user = Users(
             name=user.name,
             email=user.email,
             password_hash=password_hash,
@@ -157,16 +154,16 @@ def verify_email(request: VerifyTokenRequest, db: Session = Depends(get_db_sessi
 
     - **token**: El token enviado al correo electrónico del usuario.
     """
-    user = db.query(User).filter(User.verification_token == request.token).first()
+    user = db.query(Users).filter(Users.verification_token == request.token).first()
     
     if not user:
         return create_response("error", "Token inválido")
     
     try:
-        # Usar get_state para obtener el estado "Verificado" del tipo "User"
-        verified_state = get_state(db, "Verificado", "User")
+        # Usar get_state para obtener el estado "Verificado" del tipo "Users"
+        verified_state = get_state(db, "Verificado", "Users")
         if not verified_state:
-            return create_response("error", "No se encontró el estado 'Verificado' para el tipo 'User'", status_code=400)
+            return create_response("error", "No se encontró el estado 'Verificado' para el tipo 'Users'", status_code=400)
 
         # Actualizar el usuario: marcar como verificado y cambiar el user_state_id
         user.verification_token = None
@@ -195,7 +192,7 @@ def forgot_password(request: PasswordResetRequest, db: Session = Depends(get_db_
 
     logger.info("Iniciando el proceso de restablecimiento de contraseña para el correo: %s", request.email)
     
-    user = db.query(User).filter(User.email == request.email).first()
+    user = db.query(Users).filter(Users.email == request.email).first()
     
     if not user:
         logger.warning("Correo no encontrado: %s", request.email)
@@ -322,7 +319,7 @@ Este endpoint permite restablecer la contraseña de un usuario, siempre que el t
             return create_response("error", "El token ha expirado")
 
         # Obtener el usuario de la base de datos usando el token
-        user = db.query(User).filter(User.verification_token == reset.token).first()
+        user = db.query(Users).filter(Users.verification_token == reset.token).first()
         if not user:
             logger.warning("Usuario no encontrado para el token: %s", reset.token)
             return create_response("error", "Usuario no encontrado")
@@ -380,12 +377,12 @@ Este endpoint permite a los usuarios autenticarse mediante correo electrónico y
 
 - **Logs**: Se registran logs para errores de autenticación, generación de tokens de sesión y cualquier error durante el inicio de sesión.
 """
-    user = db.query(User).filter(User.email == request.email).first()
+    user = db.query(Users).filter(Users.email == request.email).first()
 
     if not user or not verify_password(request.password, user.password_hash):
         return create_response("error", "Credenciales incorrectas")
 
-    verified_state = get_state(db, "Verificado", "User")
+    verified_state = get_state(db, "Verificado", "Users")
     if not verified_state or user.user_state_id != verified_state.user_state_id:
         new_verification_token = generate_verification_token(4)
         user.verification_token = new_verification_token

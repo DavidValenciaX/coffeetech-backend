@@ -2,7 +2,7 @@ from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
 from typing import Optional
 from datetime import datetime
-from models.models import Notification
+from models.models import Notifications
 from utils.security import verify_session_token
 from dataBase import get_db_session
 from pydantic import BaseModel
@@ -52,7 +52,7 @@ def get_notifications(session_token: str, db: Session = Depends(get_db_session))
     logger.info(f"Usuario autenticado: {user.user_id} - {user.name}")
 
     # Consultar las notificaciones del usuario en la base de datos
-    notifications = db.query(Notification).filter(Notification.user_id == user.user_id).all()
+    notifications = db.query(Notifications).filter(Notifications.user_id == user.user_id).all()
 
     logger.info(f"Notificaciones obtenidas: {len(notifications)}")
 

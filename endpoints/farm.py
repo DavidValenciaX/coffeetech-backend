@@ -1,14 +1,13 @@
 from fastapi import APIRouter, HTTPException, Depends
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
-from models.models import Farm, UserRoleFarm, AreaUnit, Role, FarmState, RolePermission, Permission, UserFarmRoleState
+from models.models import Farms, UserRoleFarm, AreaUnits, Roles, FarmStates, RolePermission, Permissions, UserRoleFarmStates
 from utils.security import verify_session_token
 from dataBase import get_db_session
 import logging
 from utils.response import session_token_invalid_response
 from utils.response import create_response
 from utils.state import get_state
-
 
 # Configuración básica de logging
 logging.basicConfig(level=logging.INFO)
@@ -109,11 +108,11 @@ def create_farm(request: CreateFarmRequest, session_token: str, db: Session = De
         logger.warning("El área de la finca no puede exceder las 10,000 unidades de medida")
         return create_response("error", "El área de la finca no puede exceder las 10,000 unidades de medida")
 
-    # Obtener el state "Activo" para el tipo "Farm"
-    active_farm_state = get_state(db, "Activo", "Farm")
+    # Obtener el state "Activo" para el tipo "Farms"
+    active_farm_state = get_state(db, "Activo", "Farms")
     if not active_farm_state:
-        logger.error("No se encontró el estado 'Activo' para el tipo 'Farm'")
-        return create_response("error", "No se encontró el estado 'Activo' para el tipo 'Farm'", status_code=400)
+        logger.error("No se encontró el estado 'Activo' para el tipo 'Farms'")
+        return create_response("error", "No se encontró el estado 'Activo' para el tipo 'Farms'", status_code=400)
 
     # Comprobar si el usuario ya tiene una finca activa con el mismo nombre
     active_urf_state = get_state(db, "Activo", "user_role_farm")
@@ -121,10 +120,10 @@ def create_farm(request: CreateFarmRequest, session_token: str, db: Session = De
         logger.error("No se encontró el estado 'Activo' para el tipo 'user_role_farm'")
         return create_response("error", "No se encontró el estado 'Activo' para el tipo 'user_role_farm'", status_code=400)
 
-    existing_farm = db.query(Farm).join(UserRoleFarm).filter(
-        Farm.name == request.name,
+    existing_farm = db.query(Farms).join(UserRoleFarm).filter(
+        Farms.name == request.name,
         UserRoleFarm.user_id == user.user_id,
-        Farm.farm_state_id == active_farm_state.farm_state_id,  # Filtrar solo por fincas activas
+        Farms.farm_state_id == active_farm_state.farm_state_id,  # Filtrar solo por fincas activas
         UserRoleFarm.user_role_farm_state_id == active_urf_state.user_role_farm_state_id  # Check if association is active
     ).first()
 
@@ -133,20 +132,20 @@ def create_farm(request: CreateFarmRequest, session_token: str, db: Session = De
         return create_response("error", f"Ya existe una finca activa con el nombre '{request.name}' para el propietario")
 
     # Buscar la unidad de medida (areaUnit)
-    area_unit = db.query(AreaUnit).filter(AreaUnit.name == request.areaUnit).first()
+    area_unit = db.query(AreaUnits).filter(AreaUnits.name == request.areaUnit).first()
     if not area_unit:
         logger.warning("Unidad de medida no válida: %s", request.areaUnit)
         return create_response("error", "Unidad de medida no válida")
 
-    # Obtener el state "Activo" para el tipo "Farm" utilizando get_state
-    farm_state_record = get_state(db, "Activo", "Farm")
+    # Obtener el state "Activo" para el tipo "Farms" utilizando get_state
+    farm_state_record = get_state(db, "Activo", "Farms")
     if not farm_state_record:
-        logger.error("No se encontró el estado 'Activo' para el tipo 'Farm'")
-        return create_response("error", "No se encontró el estado 'Activo' para el tipo 'Farm'", status_code=400)
+        logger.error("No se encontró el estado 'Activo' para el tipo 'Farms'")
+        return create_response("error", "No se encontró el estado 'Activo' para el tipo 'Farms'", status_code=400)
 
     try:
         # Crear la nueva finca
-        new_farm = Farm(
+        new_farm = Farms(
             name=request.name,
             area=request.area,
             area_unit_id=area_unit.area_unit_id,
@@ -158,7 +157,7 @@ def create_farm(request: CreateFarmRequest, session_token: str, db: Session = De
         logger.info("Finca creada exitosamente con ID: %s", new_farm.farm_id)
 
         # Buscar el rol "Propietario"
-        role = db.query(Role).filter(Role.name == "Propietario").first()
+        role = db.query(Roles).filter(Roles.name == "Propietario").first()
         if not role:
             logger.error("Rol 'Propietario' no encontrado")
             raise HTTPException(status_code=400, detail="Rol 'Propietario' no encontrado")
@@ -225,11 +224,11 @@ def list_farm(session_token: str, db: Session = Depends(get_db_session)):
         logger.warning("Token de sesión inválido o usuario no encontrado")
         return session_token_invalid_response()
 
-    # Obtener el state "Activo" para el tipo "Farm"
-    active_farm_state = get_state(db, "Activo", "Farm")
+    # Obtener el state "Activo" para el tipo "Farms"
+    active_farm_state = get_state(db, "Activo", "Farms")
     if not active_farm_state:
-        logger.error("No se encontró el estado 'Activo' para el tipo 'Farm'")
-        return create_response("error", "Estado 'Activo' no encontrado para Farm", status_code=400)
+        logger.error("No se encontró el estado 'Activo' para el tipo 'Farms'")
+        return create_response("error", "Estado 'Activo' no encontrado para Farms", status_code=400)
 
     # Obtener el state "Activo" para el tipo "user_role_farm"
     active_urf_state = get_state(db, "Activo", "user_role_farm")
@@ -239,18 +238,18 @@ def list_farm(session_token: str, db: Session = Depends(get_db_session)):
 
     try:
         # Realizar la consulta con los filtros adicionales de estado activo
-        farms = db.query(Farm, AreaUnit, FarmState, Role).select_from(UserRoleFarm).join(
-            Farm, UserRoleFarm.farm_id == Farm.farm_id
+        farms = db.query(Farms, AreaUnits, FarmStates, Roles).select_from(UserRoleFarm).join(
+            Farms, UserRoleFarm.farm_id == Farms.farm_id
         ).join(
-            AreaUnit, Farm.area_unit_id == AreaUnit.area_unit_id
+            AreaUnits, Farms.area_unit_id == AreaUnits.area_unit_id
         ).join(
-            FarmState, Farm.farm_state_id == FarmState.farm_state_id
+            FarmStates, Farms.farm_state_id == FarmStates.farm_state_id
         ).join(
-            Role, UserRoleFarm.role_id == Role.role_id
+            Roles, UserRoleFarm.role_id == Roles.role_id
         ).filter(
             UserRoleFarm.user_id == user.user_id,
             UserRoleFarm.user_role_farm_state_id == active_urf_state.user_role_farm_state_id,
-            Farm.farm_state_id == active_farm_state.farm_state_id
+            Farms.farm_state_id == active_farm_state.farm_state_id
         ).all()
 
         farm_list = []
@@ -313,15 +312,15 @@ def update_farm(request: UpdateFarmRequest, session_token: str, db: Session = De
         return session_token_invalid_response()
 
     # Obtener el state "Activo" para la finca y la relación user_role_farm
-    active_farm_state = get_state(db, "Activo", "Farm")
+    active_farm_state = get_state(db, "Activo", "Farms")
     active_urf_state = get_state(db, "Activo", "user_role_farm")
 
     # Verificar si el usuario está asociado con la finca y si tanto la finca como la relación están activas
-    user_role_farm = db.query(UserRoleFarm).join(Farm).filter(
+    user_role_farm = db.query(UserRoleFarm).join(Farms).filter(
         UserRoleFarm.farm_id == request.farm_id,
         UserRoleFarm.user_id == user.user_id,
         UserRoleFarm.user_role_farm_state_id == active_urf_state.user_role_farm_state_id,
-        Farm.farm_state_id == active_farm_state.farm_state_id
+        Farms.farm_state_id == active_farm_state.farm_state_id
     ).first()
 
     if not user_role_farm:
@@ -329,9 +328,9 @@ def update_farm(request: UpdateFarmRequest, session_token: str, db: Session = De
         return create_response("error", "No tienes permiso para editar esta finca porque no estás asociado con una finca activa")
 
     # Verificar permisos para el rol del usuario
-    role_permission = db.query(RolePermission).join(Permission).filter(
+    role_permission = db.query(RolePermission).join(Permissions).filter(
         RolePermission.role_id == user_role_farm.role_id,
-        Permission.name == "edit_farm"
+        Permissions.name == "edit_farm"
     ).first()
 
     if not role_permission:
@@ -352,26 +351,26 @@ def update_farm(request: UpdateFarmRequest, session_token: str, db: Session = De
         return create_response("error", "El área de la finca debe ser un número positivo mayor que cero")
 
     # Buscar la unidad de medida (areaUnit)
-    area_unit = db.query(AreaUnit).filter(AreaUnit.name == request.areaUnit).first()
+    area_unit = db.query(AreaUnits).filter(AreaUnits.name == request.areaUnit).first()
     if not area_unit:
         logger.warning("Unidad de medida no válida: %s", request.areaUnit)
         return create_response("error", "Unidad de medida no válida")
 
     try:
         # Buscar la finca que se está intentando actualizar
-        farm = db.query(Farm).filter(Farm.farm_id == request.farm_id).first()
+        farm = db.query(Farms).filter(Farms.farm_id == request.farm_id).first()
         if not farm:
             logger.warning("Finca no encontrada")
             return create_response("error", "Finca no encontrada")
 
         # Verificar si el nuevo nombre ya está en uso por otra finca en la que el usuario es propietario
         if farm.name != request.name:  # Solo validar el nombre si se está intentando cambiar
-            existing_farm = db.query(Farm).join(UserRoleFarm).join(Role).filter(
-                Farm.name == request.name,
-                Farm.farm_id != request.farm_id,
+            existing_farm = db.query(Farms).join(UserRoleFarm).join(Roles).filter(
+                Farms.name == request.name,
+                Farms.farm_id != request.farm_id,
                 UserRoleFarm.user_id == user.user_id,
-                Role.name == "Propietario",  # Verificar que el usuario sea propietario
-                Farm.farm_state_id == active_farm_state.farm_state_id,
+                Roles.name == "Propietario",  # Verificar que el usuario sea propietario
+                Farms.farm_state_id == active_farm_state.farm_state_id,
                 UserRoleFarm.user_role_farm_state_id == active_urf_state.user_role_farm_state_id
             ).first()
 
@@ -427,10 +426,10 @@ def get_farm(farm_id: int, session_token: str, db: Session = Depends(get_db_sess
         return session_token_invalid_response()
 
     # Obtener el state "Activo" para la finca y user_role_farm
-    active_farm_state = get_state(db, "Activo", "Farm")
+    active_farm_state = get_state(db, "Activo", "Farms")
     if not active_farm_state:
-        logger.error("No se encontró el estado 'Activo' para el tipo 'Farm'")
-        return create_response("error", "Estado 'Activo' no encontrado para Farm", status_code=400)
+        logger.error("No se encontró el estado 'Activo' para el tipo 'Farms'")
+        return create_response("error", "Estado 'Activo' no encontrado para Farms", status_code=400)
 
     active_urf_state = get_state(db, "Activo", "user_role_farm")
     if not active_urf_state:
@@ -439,19 +438,19 @@ def get_farm(farm_id: int, session_token: str, db: Session = Depends(get_db_sess
 
     try:
         # Verificar que la finca y la relación user_role_farm estén activas
-        farm_data = db.query(Farm, AreaUnit, FarmState, Role).select_from(UserRoleFarm).join(
-            Farm, UserRoleFarm.farm_id == Farm.farm_id
+        farm_data = db.query(Farms, AreaUnits, FarmStates, Roles).select_from(UserRoleFarm).join(
+            Farms, UserRoleFarm.farm_id == Farms.farm_id
         ).join(
-            AreaUnit, Farm.area_unit_id == AreaUnit.area_unit_id
+            AreaUnits, Farms.area_unit_id == AreaUnits.area_unit_id
         ).join(
-            FarmState, Farm.farm_state_id == FarmState.farm_state_id
+            FarmStates, Farms.farm_state_id == FarmStates.farm_state_id
         ).join(
-            Role, UserRoleFarm.role_id == Role.role_id
+            Roles, UserRoleFarm.role_id == Roles.role_id
         ).filter(
             UserRoleFarm.user_id == user.user_id,
             UserRoleFarm.user_role_farm_state_id == active_urf_state.user_role_farm_state_id,
-            Farm.farm_state_id == active_farm_state.farm_state_id,
-            Farm.farm_id == farm_id
+            Farms.farm_state_id == active_farm_state.farm_state_id,
+            Farms.farm_id == farm_id
         ).first()
 
         # Validar si se encontró la finca
@@ -506,10 +505,10 @@ def delete_farm(farm_id: int, session_token: str, db: Session = Depends(get_db_s
         return create_response("error", "Token de sesión inválido o usuario no encontrado")
 
     # Obtener el state "Activo" para la finca y user_role_farm
-    active_farm_state = get_state(db, "Activo", "Farm")
+    active_farm_state = get_state(db, "Activo", "Farms")
     if not active_farm_state:
-        logger.error("No se encontró el estado 'Activo' para el tipo 'Farm'")
-        return create_response("error", "Estado 'Activo' no encontrado para Farm", status_code=400)
+        logger.error("No se encontró el estado 'Activo' para el tipo 'Farms'")
+        return create_response("error", "Estado 'Activo' no encontrado para Farms", status_code=400)
 
     active_urf_state = get_state(db, "Activo", "user_role_farm")
     if not active_urf_state:
@@ -517,11 +516,11 @@ def delete_farm(farm_id: int, session_token: str, db: Session = Depends(get_db_s
         return create_response("error", "Estado 'Activo' no encontrado para user_role_farm", status_code=400)
 
     # Verificar si el usuario está asociado con la finca activa
-    user_role_farm = db.query(UserRoleFarm).join(Farm).filter(
+    user_role_farm = db.query(UserRoleFarm).join(Farms).filter(
         UserRoleFarm.user_id == user.user_id,
         UserRoleFarm.farm_id == farm_id,
         UserRoleFarm.user_role_farm_state_id == active_urf_state.user_role_farm_state_id,
-        Farm.farm_state_id == active_farm_state.farm_state_id
+        Farms.farm_state_id == active_farm_state.farm_state_id
     ).first()
 
     if not user_role_farm:
@@ -529,9 +528,9 @@ def delete_farm(farm_id: int, session_token: str, db: Session = Depends(get_db_s
         return create_response("error", "No tienes permiso para eliminar esta finca")
 
     # Verificar permisos para eliminar la finca
-    role_permission = db.query(RolePermission).join(Permission).filter(
+    role_permission = db.query(RolePermission).join(Permissions).filter(
         RolePermission.role_id == user_role_farm.role_id,
-        Permission.name == "delete_farm"
+        Permissions.name == "delete_farm"
     ).first()
 
     if not role_permission:
@@ -539,18 +538,18 @@ def delete_farm(farm_id: int, session_token: str, db: Session = Depends(get_db_s
         return create_response("error", "No tienes permiso para eliminar esta finca")
 
     try:
-        farm = db.query(Farm).filter(Farm.farm_id == farm_id).first()
+        farm = db.query(Farms).filter(Farms.farm_id == farm_id).first()
 
         if not farm:
             logger.warning("Finca no encontrada")
             return create_response("error", "Finca no encontrada")
 
         # Cambiar el estado de la finca a "Inactiva"
-        inactive_farm_state = get_state(db, "Inactiva", "Farm")
+        inactive_farm_state = get_state(db, "Inactiva", "Farms")
 
         if not inactive_farm_state:
-            logger.error("No se encontró el estado 'Inactiva' para el tipo 'Farm'")
-            raise HTTPException(status_code=400, detail="No se encontró el estado 'Inactiva' para el tipo 'Farm'.")
+            logger.error("No se encontró el estado 'Inactiva' para el tipo 'Farms'")
+            raise HTTPException(status_code=400, detail="No se encontró el estado 'Inactiva' para el tipo 'Farms'.")
 
         farm.farm_state_id = inactive_farm_state.farm_state_id
 

@@ -3,22 +3,19 @@ from sqlalchemy.orm import Session
 from typing import Dict, Any
 from pydantic import BaseModel, EmailStr, Field
 from models.models import (
-    Farm,
+    Farms,
     UserRoleFarm,
-    User,
+    Users,
     RolePermission,
-    Permission,
-    Role
+    Permissions,
+    Roles
 )
 from utils.security import verify_session_token
 from dataBase import get_db_session
 from utils.response import create_response, session_token_invalid_response
 from sqlalchemy import func
-from utils.state import get_state # Import get_state
+from utils.state import get_state
 import logging
-
-
-
 
 # Configuración básica de logging
 logging.basicConfig(level=logging.INFO)
@@ -110,7 +107,7 @@ def list_collaborators(
     logger.info(f"Usuario autenticado: {user.name} (ID: {user.user_id})")
 
     # 2. Verificar que la finca exista
-    farm = db.query(Farm).filter(Farm.farm_id == farm_id).first()
+    farm = db.query(Farms).filter(Farms.farm_id == farm_id).first()
     if not farm:
         logger.error(f"Finca con ID {farm_id} no encontrada")
         return create_response(
@@ -135,8 +132,8 @@ def list_collaborators(
     logger.info(f"Estado 'Activo' encontrado: {urf_active_state.name} (ID: {urf_active_state.user_role_farm_state_id})") # Use correct ID field
 
     # 4. Obtener el permiso 'read_collaborators' con insensibilidad a mayúsculas
-    read_permission = db.query(Permission).filter(
-        func.lower(Permission.name) == "read_collaborators"
+    read_permission = db.query(Permissions).filter(
+        func.lower(Permissions.name) == "read_collaborators"
     ).first()
 
     logger.info(f"Permiso 'read_collaborators' obtenido: {read_permission}")
@@ -168,10 +165,10 @@ def list_collaborators(
     logger.info(f"Usuario {user.name} tiene permiso 'read_collaborators' en la finca ID {farm_id}")
 
     # 6. Obtener los colaboradores activos de la finca junto con su rol y user_id
-    collaborators_query = db.query(User.user_id, User.name, User.email, Role.name.label("role")).join(
-        UserRoleFarm, User.user_id == UserRoleFarm.user_id
+    collaborators_query = db.query(Users.user_id, Users.name, Users.email, Roles.name.label("role")).join(
+        UserRoleFarm, Users.user_id == UserRoleFarm.user_id
     ).join(
-        Role, UserRoleFarm.role_id == Role.role_id
+        Roles, UserRoleFarm.role_id == Roles.role_id
     ).filter(
         UserRoleFarm.farm_id == farm_id,
         UserRoleFarm.user_role_farm_state_id == urf_active_state.user_role_farm_state_id
@@ -256,7 +253,7 @@ def edit_collaborator_role(
     logger.info(f"Usuario autenticado: {user.name} (ID: {user.user_id})")
 
     # 2. Verificar que la finca exista
-    farm = db.query(Farm).filter(Farm.farm_id == farm_id).first()
+    farm = db.query(Farms).filter(Farms.farm_id == farm_id).first()
     if not farm:
         logger.error(f"Finca con ID {farm_id} no encontrada")
         return create_response(
@@ -295,7 +292,7 @@ def edit_collaborator_role(
         )
 
     # Obtener el rol del usuario que realiza la acción
-    current_user_role = db.query(Role).filter(Role.role_id == user_role_farm.role_id).first()
+    current_user_role = db.query(Roles).filter(Roles.role_id == user_role_farm.role_id).first()
     if not current_user_role:
         logger.error(f"Rol con ID {user_role_farm.role_id} no encontrado")
         return create_response(
@@ -307,7 +304,7 @@ def edit_collaborator_role(
     logger.info(f"Rol del usuario: {current_user_role.name}")
 
     # 5. Obtener el colaborador a editar
-    collaborator = db.query(User).filter(User.user_id == edit_request.collaborator_user_id).first()
+    collaborator = db.query(Users).filter(Users.user_id == edit_request.collaborator_user_id).first()
     if not collaborator:
         logger.error(f"Colaborador con ID {edit_request.collaborator_user_id} no encontrado")
         return create_response(
@@ -343,7 +340,7 @@ def edit_collaborator_role(
         )
 
     # Obtener el rol actual del colaborador
-    collaborator_current_role = db.query(Role).filter(Role.role_id == collaborator_role_farm.role_id).first()
+    collaborator_current_role = db.query(Roles).filter(Roles.role_id == collaborator_role_farm.role_id).first()
     if not collaborator_current_role:
         logger.error(f"Rol con ID {collaborator_role_farm.role_id} no encontrado para el colaborador")
         return create_response(
@@ -379,8 +376,8 @@ def edit_collaborator_role(
         )
 
     # Obtener el permiso requerido
-    required_permission = db.query(Permission).filter(
-        func.lower(Permission.name) == permission_name.lower()
+    required_permission = db.query(Permissions).filter(
+        func.lower(Permissions.name) == permission_name.lower()
     ).first()
 
     if not required_permission:
@@ -438,7 +435,7 @@ def edit_collaborator_role(
     logger.info(f"Rol '{edit_request.new_role}' puede ser asignado por un usuario con rol '{current_user_role.name}'")
 
     # 11. Obtener el rol objetivo
-    target_role = db.query(Role).filter(Role.name == edit_request.new_role).first()
+    target_role = db.query(Roles).filter(Roles.name == edit_request.new_role).first()
     if not target_role:
         logger.error(f"Rol '{edit_request.new_role}' no encontrado en la base de datos")
         return create_response(
@@ -518,7 +515,7 @@ def delete_collaborator(
     logger.info(f"Usuario autenticado: {user.name} (ID: {user.user_id})")
 
     # 3. Verificar que la finca exista
-    farm = db.query(Farm).filter(Farm.farm_id == farm_id).first()
+    farm = db.query(Farms).filter(Farms.farm_id == farm_id).first()
     if not farm:
         logger.error(f"Finca con ID {farm_id} no encontrada")
         return create_response(
@@ -558,7 +555,7 @@ def delete_collaborator(
         )
 
     # Obtener el rol del usuario que realiza la acción
-    current_user_role = db.query(Role).filter(Role.role_id == user_role_farm.role_id).first()
+    current_user_role = db.query(Roles).filter(Roles.role_id == user_role_farm.role_id).first()
     if not current_user_role:
         logger.error(f"Rol con ID {user_role_farm.role_id} no encontrado")
         return create_response(
@@ -570,7 +567,7 @@ def delete_collaborator(
     logger.info(f"Rol del usuario: {current_user_role.name}")
 
     # 6. Obtener el colaborador a eliminar
-    collaborator = db.query(User).filter(User.user_id == delete_request.collaborator_user_id).first()
+    collaborator = db.query(Users).filter(Users.user_id == delete_request.collaborator_user_id).first()
     if not collaborator:
         logger.error(f"Colaborador con ID {delete_request.collaborator_user_id} no encontrado")
         return create_response(
@@ -606,7 +603,7 @@ def delete_collaborator(
         )
 
     # 9. Determinar el permiso requerido basado en el rol del colaborador
-    collaborator_role = db.query(Role).filter(Role.role_id == collaborator_role_farm.role_id).first()
+    collaborator_role = db.query(Roles).filter(Roles.role_id == collaborator_role_farm.role_id).first()
     if not collaborator_role:
         logger.error(f"Rol con ID {collaborator_role_farm.role_id} no encontrado para el colaborador")
         return create_response(
@@ -630,8 +627,8 @@ def delete_collaborator(
         )
 
     # 10. Obtener el permiso requerido
-    required_permission = db.query(Permission).filter(
-        func.lower(Permission.name) == required_permission_name.lower()
+    required_permission = db.query(Permissions).filter(
+        func.lower(Permissions.name) == required_permission_name.lower()
     ).first()
 
     if not required_permission:

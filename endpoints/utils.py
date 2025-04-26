@@ -1,6 +1,6 @@
 from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
-from models.models import Role, AreaUnit, CoffeeVariety
+from models.models import Roles, AreaUnits, CoffeeVarieties
 from dataBase import get_db_session
 from sqlalchemy.orm import joinedload
 
@@ -18,7 +18,7 @@ def list_roles(db: Session = Depends(get_db_session)):
         dict: Diccionario con el estado, mensaje y datos de los roles y sus permisos.
     """
     # Consulta los roles y carga los permisos asociados
-    roles = db.query(Role).all()
+    roles = db.query(Roles).all()
 
     # Construir la respuesta con roles y sus permisos
     return {
@@ -52,7 +52,7 @@ def list_area_units(db: Session = Depends(get_db_session)):
         dict: Diccionario con el estado, mensaje y datos de las unidades de área.
     """
     # Consulta todas las unidades de área
-    area_units = db.query(AreaUnit).all()
+    area_units = db.query(AreaUnits).all()
 
     # Construir la respuesta con las unidades de área
     return {
@@ -80,7 +80,7 @@ def list_coffee_varieties(db: Session = Depends(get_db_session)):
         dict: Diccionario con el estado, mensaje y datos de las variedades de café.
     """
     # Consulta todas las variedades de café y carga las parcelas asociadas
-    varieties = db.query(CoffeeVariety).options(joinedload(CoffeeVariety.plots)).all()
+    varieties = db.query(CoffeeVarieties).options(joinedload(CoffeeVarieties.plots)).all()
 
     # Construir la respuesta con las variedades de café y sus parcelas asociadas
     return {

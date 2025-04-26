@@ -112,7 +112,7 @@ class RolePermission(Base):
     role_id = Column(Integer, ForeignKey('roles.role_id'), primary_key=True, nullable=False)
     permission_id = Column(Integer, ForeignKey('permissions.permission_id'), primary_key=True, nullable=False)
 
-    # Relaciones con Role y Permission
+    # Relaciones con Roles y Permissions
     role = relationship("Roles", back_populates="permissions")
     permission = relationship("Permissions", back_populates="roles")
 
@@ -153,7 +153,7 @@ class NotificationTypes(Base):
     notification_type_id = Column(Integer, primary_key=True)
     name = Column(String(255), nullable=False, unique=True)
 
-    # Relación con Notification
+    # Relación con Notifications
     notifications = relationship("Notifications", back_populates="notification_type")
 
 class Notifications(Base):

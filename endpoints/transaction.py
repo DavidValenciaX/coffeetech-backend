@@ -2,7 +2,7 @@ from fastapi import APIRouter, Depends
 from pydantic import BaseModel, Field, constr
 from sqlalchemy.orm import Session
 from models.models import (
-    TransactionCategory,Transaction, TransactionType, Plot, Farm, TransactionState, RolePermission, Permission, UserRoleFarm
+    TransactionCategories, Transactions, TransactionTypes, Plots, Farms, TransactionStates, RolePermission, Permissions, UserRoleFarm
 )
 from utils.security import verify_session_token
 from dataBase import get_db_session
@@ -23,7 +23,7 @@ logger = logging.getLogger(__name__)
 
 bogota_tz = pytz.timezone("America/Bogota")
 
-# Pydantic Models for Transaction Endpoints
+# Pydantic Models for Transactions Endpoints
 
 class CreateTransactionRequest(BaseModel):
     plot_id: int = Field(..., description="ID del lote asociado a la transacción")
@@ -56,7 +56,7 @@ class TransactionResponse(BaseModel):
     transaction_date: date
     transaction_state: str
 
-# Endpoint to Create a Transaction
+# Endpoint to Create a Transactions
 @router.post("/create-transaction")
 def create_transaction(
     request: CreateTransactionRequest,
@@ -100,9 +100,9 @@ def create_transaction(
         return create_response("error", "No tienes permisos para agregar transacciones", status_code=403)
     
     # Verificar permiso 'add_transaction'
-    role_permission = db.query(RolePermission).join(Permission).filter(
+    role_permission = db.query(RolePermission).join(Permissions).filter(
         RolePermission.role_id == user_role_farm.role_id,
-        Permission.name == "add_transaction"
+        Permissions.name == "add_transaction"
     ).first()
     
     if not role_permission:
@@ -110,14 +110,14 @@ def create_transaction(
         return create_response("error", "No tienes permiso para agregar transacciones", status_code=403)
     
     # 4. Verificar que el lote existe y está activo
-    active_plot_state = get_state(db, "Activo", "Plot")
+    active_plot_state = get_state(db, "Activo", "Plots")
     if not active_plot_state:
-        logger.error("Estado 'Activo' para Plot no encontrado")
-        return create_response("error", "Estado 'Activo' para Plot no encontrado", status_code=500)
+        logger.error("Estado 'Activo' para Plots no encontrado")
+        return create_response("error", "Estado 'Activo' para Plots no encontrado", status_code=500)
     
-    plot = db.query(Plot).filter(
-        Plot.plot_id == request.plot_id,
-        Plot.plot_state_id == active_plot_state.plot_state_id
+    plot = db.query(Plots).filter(
+        Plots.plot_id == request.plot_id,
+        Plots.plot_state_id == active_plot_state.plot_state_id
     ).first()
     
     if not plot:
@@ -126,7 +126,7 @@ def create_transaction(
     
     
     # 6. Verificar que el tipo de transacción existe
-    transaction_type = db.query(TransactionType).filter(TransactionType.name == request.transaction_type_name).first()
+    transaction_type = db.query(TransactionTypes).filter(TransactionTypes.name == request.transaction_type_name).first()
     if not transaction_type:
         logger.warning(f"El tipo de transacción '{request.transaction_type_name}' no existe")
         return create_response("error", "El tipo de transacción especificado no existe", status_code=400)
@@ -137,24 +137,24 @@ def create_transaction(
         return create_response("error", "El valor de la transacción debe ser positivo", status_code=400)
     
      # 8. Verificar que la categoría de transacción existe para el tipo de transacción
-    transaction_category = db.query(TransactionCategory).filter(
-        TransactionCategory.name == request.transaction_category_name,
-        TransactionCategory.transaction_type_id == transaction_type.transaction_type_id
+    transaction_category = db.query(TransactionCategories).filter(
+        TransactionCategories.name == request.transaction_category_name,
+        TransactionCategories.transaction_type_id == transaction_type.transaction_type_id
     ).first()
     if not transaction_category:
         logger.warning(f"La categoría de transacción '{request.transaction_category_name}' no existe para el tipo '{request.transaction_type_name}'")
         return create_response("error", "La categoría de transacción especificada no existe para el tipo de transacción proporcionado", status_code=400)
     
     
-    # 9. Obtener el estado 'Activo' para Transaction
-    active_transaction_state = get_state(db, "Activo", "Transaction")
+    # 9. Obtener el estado 'Activo' para Transactions
+    active_transaction_state = get_state(db, "Activo", "Transactions")
     if not active_transaction_state:
-        logger.error("Estado 'Activo' para Transaction no encontrado")
-        return create_response("error", "Estado 'Activo' para Transaction no encontrado", status_code=500)
+        logger.error("Estado 'Activo' para Transactions no encontrado")
+        return create_response("error", "Estado 'Activo' para Transactions no encontrado", status_code=500)
     
     # 10. Crear la transacción
     try:
-        new_transaction = Transaction(
+        new_transaction = Transactions(
             plot_id=request.plot_id,
             transaction_type_id=transaction_type.transaction_type_id,
             transaction_category_id=transaction_category.transaction_category_id,  # Asignar categoría
@@ -192,7 +192,7 @@ def create_transaction(
         logger.error(f"Error al crear la transacción: {str(e)}")
         return create_response("error", f"Error al crear la transacción: {str(e)}", status_code=500)
 
-# Endpoint to Edit a Transaction
+# Endpoint to Edit a Transactions
 @router.post("/edit-transaction")
 def edit_transaction(
     request: UpdateTransactionRequest,
@@ -220,16 +220,16 @@ def edit_transaction(
         return session_token_invalid_response()
     
     # 3. Obtener la transacción a actualizar
-    transaction = db.query(Transaction).filter(Transaction.transaction_id == request.transaction_id).first()
+    transaction = db.query(Transactions).filter(Transactions.transaction_id == request.transaction_id).first()
     if not transaction:
         logger.warning(f"La transacción con ID {request.transaction_id} no existe")
         return create_response("error", "La transacción especificada no existe", status_code=404)
     
     # 4. Verificar que la transacción no esté inactiva
-    inactive_transaction_state = get_state(db, "Inactivo", "Transaction")
+    inactive_transaction_state = get_state(db, "Inactivo", "Transactions")
     if not inactive_transaction_state:
-        logger.error("Estado 'Inactivo' para Transaction no encontrado")
-        return create_response("error", "Estado 'Inactivo' para Transaction no encontrado", status_code=500)
+        logger.error("Estado 'Inactivo' para Transactions no encontrado")
+        return create_response("error", "Estado 'Inactivo' para Transactions no encontrado", status_code=500)
     
     if transaction.transaction_state_id == inactive_transaction_state.transaction_state_id:
         logger.warning(f"La transacción con ID {request.transaction_id} está inactiva y no puede ser modificada")
@@ -252,9 +252,9 @@ def edit_transaction(
         return create_response("error", "No tienes permisos para editar transacciones en esta finca", status_code=403)
     
     # 6. Verificar permiso 'edit_transaction'
-    role_permission = db.query(RolePermission).join(Permission).filter(
+    role_permission = db.query(RolePermission).join(Permissions).filter(
         RolePermission.role_id == user_role_farm.role_id,
-        Permission.name == "edit_transaction"
+        Permissions.name == "edit_transaction"
     ).first()
     
     if not role_permission:
@@ -265,7 +265,7 @@ def edit_transaction(
     try:
         # Actualizar el tipo de transacción si se proporciona
         if request.transaction_type_name:
-            transaction_type = db.query(TransactionType).filter(TransactionType.name == request.transaction_type_name).first()
+            transaction_type = db.query(TransactionTypes).filter(TransactionTypes.name == request.transaction_type_name).first()
             if not transaction_type:
                 logger.warning(f"El tipo de transacción '{request.transaction_type_name}' no existe")
                 return create_response("error", "El tipo de transacción especificado no existe", status_code=400)
@@ -275,9 +275,9 @@ def edit_transaction(
         if request.transaction_category_name:
             # Si el tipo de transacción se ha actualizado en este mismo request, usar el nuevo tipo
             current_transaction_type_id = request.transaction_type_name and transaction_type.transaction_type_id or transaction.transaction_type_id
-            transaction_category = db.query(TransactionCategory).filter(
-                TransactionCategory.name == request.transaction_category_name,
-                TransactionCategory.transaction_type_id == current_transaction_type_id
+            transaction_category = db.query(TransactionCategories).filter(
+                TransactionCategories.name == request.transaction_category_name,
+                TransactionCategories.transaction_type_id == current_transaction_type_id
             ).first()
             if not transaction_category:
                 logger.warning(f"La categoría de transacción '{request.transaction_category_name}' no existe para el tipo de transacción actual")
@@ -306,15 +306,15 @@ def edit_transaction(
         db.refresh(transaction)
         
         # Obtener el estado actual directamente por ID
-        transaction_current_state = db.query(TransactionState).filter(TransactionState.transaction_state_id == transaction.transaction_state_id).first()
+        transaction_current_state = db.query(TransactionStates).filter(TransactionStates.transaction_state_id == transaction.transaction_state_id).first()
         transaction_state_name = transaction_current_state.name if transaction_current_state else "Desconocido"
         
         # Obtener el tipo de transacción actualizado
-        txn_type = db.query(TransactionType).filter(TransactionType.transaction_type_id == transaction.transaction_type_id).first()
+        txn_type = db.query(TransactionTypes).filter(TransactionTypes.transaction_type_id == transaction.transaction_type_id).first()
         txn_type_name = txn_type.name if txn_type else "Desconocido"
         
         # Obtener la categoría de transacción actualizada
-        txn_category = db.query(TransactionCategory).filter(TransactionCategory.transaction_category_id == transaction.transaction_category_id).first()
+        txn_category = db.query(TransactionCategories).filter(TransactionCategories.transaction_category_id == transaction.transaction_category_id).first()
         txn_category_name = txn_category.name if txn_category else "Desconocido"
         
         response_data = TransactionResponse(
@@ -339,7 +339,7 @@ def edit_transaction(
         logger.error(f"Error al actualizar la transacción: {str(e)}")
         return create_response("error", f"Error al actualizar la transacción: {str(e)}", status_code=500)
 
-# Endpoint to Delete a Transaction
+# Endpoint to Delete a Transactions
 @router.post("/delete-transaction")
 def delete_transaction(
     request: DeleteTransactionRequest,
@@ -364,16 +364,16 @@ def delete_transaction(
         return session_token_invalid_response()
     
     # 3. Obtener la transacción a eliminar
-    transaction = db.query(Transaction).filter(Transaction.transaction_id == request.transaction_id).first()
+    transaction = db.query(Transactions).filter(Transactions.transaction_id == request.transaction_id).first()
     if not transaction:
         logger.warning(f"La transacción con ID {request.transaction_id} no existe")
         return create_response("error", "La transacción especificada no existe", status_code=404)
     
     # 4. Verificar que la transacción no esté ya inactiva
-    inactive_transaction_state = get_state(db, "Inactivo", "Transaction")
+    inactive_transaction_state = get_state(db, "Inactivo", "Transactions")
     if not inactive_transaction_state:
-        logger.error("Estado 'Inactivo' para Transaction no encontrado")
-        return create_response("error", "Estado 'Inactivo' para Transaction no encontrado", status_code=500)
+        logger.error("Estado 'Inactivo' para Transactions no encontrado")
+        return create_response("error", "Estado 'Inactivo' para Transactions no encontrado", status_code=500)
     
     if transaction.transaction_state_id == inactive_transaction_state.transaction_state_id:
         logger.warning(f"La transacción con ID {request.transaction_id} ya está inactiva")
@@ -396,9 +396,9 @@ def delete_transaction(
         return create_response("error", "No tienes permisos para eliminar transacciones en esta finca", status_code=403)
     
     # 6. Verificar permiso 'delete_transaction'
-    role_permission = db.query(RolePermission).join(Permission).filter(
+    role_permission = db.query(RolePermission).join(Permissions).filter(
         RolePermission.role_id == user_role_farm.role_id,
-        Permission.name == "delete_transaction"
+        Permissions.name == "delete_transaction"
     ).first()
     
     if not role_permission:
@@ -417,7 +417,7 @@ def delete_transaction(
         logger.error(f"Error al eliminar la transacción: {str(e)}")
         return create_response("error", f"Error al eliminar la transacción: {str(e)}", status_code=500)
 
-# Endpoint to Read Transactions for a Plot
+# Endpoint to Read Transactions for a Plots
 @router.get("/list-transactions/{plot_id}")
 def read_transactions(
     plot_id: int,
@@ -442,21 +442,21 @@ def read_transactions(
         return session_token_invalid_response()
     
     # 3. Verificar que el lote exista y esté activo
-    active_plot_state = get_state(db, "Activo", "Plot")
+    active_plot_state = get_state(db, "Activo", "Plots")
     if not active_plot_state:
-        logger.error("Estado 'Activo' para Plot no encontrado")
-        return create_response("error", "Estado 'Activo' para Plot no encontrado", status_code=400)
+        logger.error("Estado 'Activo' para Plots no encontrado")
+        return create_response("error", "Estado 'Activo' para Plots no encontrado", status_code=400)
     
-    plot = db.query(Plot).filter(
-        Plot.plot_id == plot_id,
-        Plot.plot_state_id == active_plot_state.plot_state_id
+    plot = db.query(Plots).filter(
+        Plots.plot_id == plot_id,
+        Plots.plot_state_id == active_plot_state.plot_state_id
     ).first()
     if not plot:
         logger.warning(f"El lote con ID {plot_id} no existe o no está activo")
         return create_response("error", "El lote no existe o no está activo", status_code=404)
     
     # 4. Verificar que el usuario esté asociado con la finca del lote
-    farm = db.query(Farm).filter(Farm.farm_id == plot.farm_id).first()
+    farm = db.query(Farms).filter(Farms.farm_id == plot.farm_id).first()
     if not farm:
         logger.warning("La finca asociada al lote no existe")
         return create_response("error", "La finca asociada al lote no existe", status_code=404)
@@ -477,39 +477,39 @@ def read_transactions(
         return create_response("error", "No tienes permiso para ver las transacciones en esta finca", status_code=403)
     
     # 5. Verificar permiso 'read_transaction'
-    role_permission = db.query(RolePermission).join(Permission).filter(
+    role_permission = db.query(RolePermission).join(Permissions).filter(
         RolePermission.role_id == user_role_farm.role_id,
-        Permission.name == "read_transaction"
+        Permissions.name == "read_transaction"
     ).first()
     if not role_permission:
         logger.warning("El rol del usuario no tiene permiso para leer transacciones")
         return create_response("error", "No tienes permiso para ver las transacciones en esta finca", status_code=403)
     
-    # 6. Obtener el estado "Inactivo" para Transaction
-    inactive_transaction_state = get_state(db, "Inactivo", "Transaction")
+    # 6. Obtener el estado "Inactivo" para Transactions
+    inactive_transaction_state = get_state(db, "Inactivo", "Transactions")
     if not inactive_transaction_state:
-        logger.error("Estado 'Inactivo' para Transaction no encontrado")
-        return create_response("error", "Estado 'Inactivo' para Transaction no encontrado", status_code=500)
+        logger.error("Estado 'Inactivo' para Transactions no encontrado")
+        return create_response("error", "Estado 'Inactivo' para Transactions no encontrado", status_code=500)
     
     # 7. Consultar las transacciones del lote que no están inactivas
-    transactions = db.query(Transaction).filter(
-        Transaction.plot_id == plot_id,
-        Transaction.transaction_state_id != inactive_transaction_state.transaction_state_id
+    transactions = db.query(Transactions).filter(
+        Transactions.plot_id == plot_id,
+        Transactions.transaction_state_id != inactive_transaction_state.transaction_state_id
     ).all()
     
     # 8. Preparar la lista de transacciones
     transaction_list = []
     for txn in transactions:
         # Obtener el tipo de transacción
-        txn_type = db.query(TransactionType).filter(TransactionType.transaction_type_id == txn.transaction_type_id).first()
+        txn_type = db.query(TransactionTypes).filter(TransactionTypes.transaction_type_id == txn.transaction_type_id).first()
         txn_type_name = txn_type.name if txn_type else "Desconocido"
         
         # Obtener la categoría de la transacción
-        txn_category = db.query(TransactionCategory).filter(TransactionCategory.transaction_category_id == txn.transaction_category_id).first()
+        txn_category = db.query(TransactionCategories).filter(TransactionCategories.transaction_category_id == txn.transaction_category_id).first()
         txn_category_name = txn_category.name if txn_category else "Desconocido"
         
         # Obtener el estado de la transacción
-        transaction_state = db.query(TransactionState).filter(TransactionState.transaction_state_id == txn.transaction_state_id).first()
+        transaction_state = db.query(TransactionStates).filter(TransactionStates.transaction_state_id == txn.transaction_state_id).first()
         transaction_state_name = transaction_state.name if transaction_state else "Desconocido"
         
         transaction_list.append({

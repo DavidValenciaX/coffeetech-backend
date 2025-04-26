@@ -2,7 +2,7 @@
 from typing import Any, Optional
 from pydantic import BaseModel
 from decimal import Decimal
-from fastapi.responses import JSONResponse, ORJSONResponse
+from fastapi.responses import ORJSONResponse
 from datetime import datetime, date, time
 from uuid import UUID
 

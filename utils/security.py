@@ -1,12 +1,9 @@
 from passlib.context import CryptContext
 from fastapi import Depends, HTTPException
 from sqlalchemy.orm import Session
-from models.models import User
+from models.models import Users
 from dataBase import get_db_session
 from fastapi.security import OAuth2PasswordBearer
-
-
-
 
 # Cambia el esquema a "argon2"
 pwd_context = CryptContext(schemes=["argon2"], deprecated="auto")
@@ -65,18 +62,18 @@ def get_current_user(db: Session = Depends(get_db_session), token: str = Depends
         token (str): El token de verificación recibido.
 
     Returns:
-        User: El objeto usuario correspondiente al token.
+        Users: El objeto usuario correspondiente al token.
 
     Raises:
         HTTPException: Si el token es inválido o el usuario no está verificado.
     """
-    user = db.query(User).filter(User.verification_token == token).first()
+    user = db.query(Users).filter(Users.verification_token == token).first()
     if not user or not user.is_verified:
         raise HTTPException(status_code=401, detail="Invalid or missing token")
     return user
 
 # Función auxiliar para verificar tokens de sesión
-def verify_session_token(session_token: str, db: Session) -> User:
+def verify_session_token(session_token: str, db: Session) -> Users:
     """
     Verifica si un token de sesión es válido y devuelve el usuario correspondiente.
 
@@ -85,9 +82,9 @@ def verify_session_token(session_token: str, db: Session) -> User:
         db (Session): La sesión de base de datos.
 
     Returns:
-        User: El objeto usuario correspondiente al token de sesión, o None si no se encuentra.
+        Users: El objeto usuario correspondiente al token de sesión, o None si no se encuentra.
     """
-    user = db.query(User).filter(User.session_token == session_token).first()
+    user = db.query(Users).filter(Users.session_token == session_token).first()
     if not user:
         return None
     return user
