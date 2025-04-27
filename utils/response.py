@@ -42,7 +42,7 @@ def process_data_for_json(value: Any) -> Any:
     return value
 
 def create_response(
-    state: str,
+    status: str,
     message: str,
     data: Optional[Any] = None,
     status_code: int = 200
@@ -71,7 +71,7 @@ def create_response(
     return ORJSONResponse(
         status_code=status_code,
         content={
-            "state": state,
+            "status": status,
             "message": message,
             "data": processed
         }

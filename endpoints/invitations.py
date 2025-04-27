@@ -23,11 +23,11 @@ class InvitationCreate(BaseModel):
 
     Attributes:
         email (EmailStr): Dirección de correo electrónico del usuario a invitar.
-        suggested_role (str): Rol sugerido para el usuario invitado.
+        suggested_role_id (int): ID del rol sugerido para el usuario invitado.
         farm_id (int): Identificador de la finca a la que se invita.
     """
     email: EmailStr
-    suggested_role: str
+    suggested_role_id: int
     farm_id: int
 
 @router.post("/create-invitation")
@@ -142,10 +142,14 @@ def create_invitation(invitation_data: InvitationCreate, session_token: str, db:
         # Crear la notificación asociada con notification_type_id
         notification_pending_state = get_state(db, "Pendiente", "Notifications")
         if not notification_pending_state:
+            db.rollback()  # Hacer rollback en caso de un error
+            logger.error("El estado 'Pendiente' no fue encontrado para 'Notifications'")
             return create_response("error", "El estado 'Pendiente' no fue encontrado para 'Notifications'", status_code=400)
 
         invitation_notification_type = db.query(NotificationTypes).filter(NotificationTypes.name == "Invitations").first()
         if not invitation_notification_type:
+            db.rollback()  # Hacer rollback en caso de un error
+            logger.error("No se encontró el tipo de notificación 'Invitations'")
             return create_response("error", "No se encontró el tipo de notificación 'Invitations'", status_code=400)
 
         new_notification = Notifications(

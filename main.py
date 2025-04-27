@@ -2,14 +2,7 @@ from fastapi import FastAPI
 from endpoints import auth, farms, invitations, notifications, transactions, utils, collaborators, plots, reports
 from dataBase import engine
 from models.models import Base
-import os
 import logging
-
-os.environ["CUDA_VISIBLE_DEVICES"] = "-1"
-
-
-# Crear todas las tablas
-Base.metadata.create_all(bind=engine)
 
 app = FastAPI()
 
@@ -41,8 +34,6 @@ app.include_router(collaborators.router, prefix="/collaborators", tags=["Collabo
 app.include_router(transactions.router, prefix="/transaction", tags=["transaction"])
 
 app.include_router(reports.router, prefix="/reports", tags=["Reports"])
-
-# Incluir las rutas de farm con prefijo y etiqueta
 
 @app.get("/")
 def read_root():

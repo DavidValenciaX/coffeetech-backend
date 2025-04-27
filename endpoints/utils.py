@@ -22,7 +22,7 @@ def list_roles(db: Session = Depends(get_db_session)):
 
     # Construir la respuesta con roles y sus permisos
     return {
-        "state": "success",
+        "status": "success",
         "message": "Roles obtenidos correctamente",
         "data": [
             {
@@ -56,7 +56,7 @@ def list_area_units(db: Session = Depends(get_db_session)):
 
     # Construir la respuesta con las unidades de área
     return {
-        "state": "success",
+        "status": "success",
         "message": "Unidades de área obtenidas correctamente",
         "data": [
             {
@@ -84,7 +84,7 @@ def list_coffee_varieties(db: Session = Depends(get_db_session)):
 
     # Construir la respuesta con las variedades de café y sus parcelas asociadas
     return {
-        "state": "success",
+        "status": "success",
         "message": "Variedades de café obtenidas correctamente",
         "data": [
             {
