@@ -7,7 +7,7 @@ import logging
 
 logger = logging.getLogger(__name__)
 
-load_dotenv()
+load_dotenv(override=True, encoding='utf-8')
 
 def send_email(email, token, email_type, farm_name=None, owner_name=None, suggested_role=None):
     """
@@ -20,19 +20,26 @@ def send_email(email, token, email_type, farm_name=None, owner_name=None, sugges
     :param owner_name: Nombre del dueño (opcional, solo para invitación).
     :param suggested_role: Rol sugerido para el invitado (opcional, solo para invitación).
     """
-    smtp_user = os.getenv("SMTPP_USER")
-    smtp_pass = os.getenv("SMTPP_PASS")
+    smtp_user = os.getenv("SMTP_USER")
+    smtp_pass = os.getenv("SMTP_PASS")
 
     if not smtp_user or not smtp_pass:
-        print("Error: Las credenciales SMTP no están configuradas correctamente.")
+        logger.error("Las credenciales SMTP no están configuradas correctamente.")
         return
 
     smtp_host = "smtp.zoho.com"
-    smtp_port = 465  # Usar SSL en el puerto 465
-
-    # Obtener la URL del logo desde variables de entorno o usar una URL por defecto
-    logo_url = os.getenv("LOGO_URL", "https://raw.githubusercontent.com/naromu/CoffeeTech_Backend/develop/assets/logo.jpeg")
+    smtp_port = 465
     
+    # Obtener la URL base y el puerto de la aplicación desde variables de entorno
+    app_host = os.getenv("APP_BASE_URL", "http://localhost")
+    app_port = os.getenv("PORT", "8000") # Default to 8000 if not set
+    app_base_url = f"{app_host}:{app_port}"
+    
+    # Usar directamente las URLs para el logo en lugar de variables de entorno
+    # Primero intentamos con la URL del servidor, y si hay problemas, usamos la URL de Cloudinary como respaldo
+    logo_url = f"http://{app_base_url}/static/logo.jpeg"
+    fallback_logo_url = "https://res.cloudinary.com/dh58mbonw/image/upload/v1745059649/u4iwdb6nsupnnsqwkvcn.jpg"
+
     # Definir el asunto y el cuerpo del correo basado en el tipo de correo
     if email_type == 'verification':
         subject = "Verificación de Correo Electrónico"
@@ -90,7 +97,7 @@ def send_email(email, token, email_type, farm_name=None, owner_name=None, sugges
         <body>
             <div class="container">
                 <div class="header">
-                    <img src="{logo_url}" alt="Logo de CoffeTech" class="logo">
+                    <img src="{logo_url}" alt="Logo de CoffeTech" class="logo" onerror="this.onerror=null;this.src='{fallback_logo_url}';">
                     <h2>Hola,</h2>
                 </div>
                 <div class="content">
@@ -161,7 +168,7 @@ def send_email(email, token, email_type, farm_name=None, owner_name=None, sugges
         <body>
             <div class="container">
                 <div class="header">
-                    <img src="{logo_url}" alt="Logo de CoffeTech" class="logo">
+                    <img src="{logo_url}" alt="Logo de CoffeTech" class="logo" onerror="this.onerror=null;this.src='{fallback_logo_url}';">
                     <h2>Hola,</h2>
                 </div>
                 <div class="content">
@@ -246,15 +253,15 @@ def send_email(email, token, email_type, farm_name=None, owner_name=None, sugges
         <body>
             <div class="container">
                 <div class="header">
-                    <img src="{logo_url}" alt="Logo de CoffeTech" class="logo">
+                    <img src="{logo_url}" alt="Logo de CoffeTech" class="logo" onerror="this.onerror=null;this.src='{fallback_logo_url}';">
                     <h2>Hola,</h2>
                 </div>
                 <div class="content">
                     <p>Has sido invitado a unirte como <strong>{suggested_role}</strong> a la finca <strong>{farm_name}</strong> por <strong>{owner_name}</strong>.</p>
                     
                     <p>¡Te esperamos!</p>
-                    <a href="http://127.0.0.1:8000/invitation/accept-invitation/{token}" class="button">Aceptar Invitación</a>
-                    <a href="http://127.0.0.1:8000/invitation/reject-invitation/{token}" class="button reject">Rechazar Invitación</a>
+                    <a href="{app_base_url}/invitation/accept-invitation/{token}" class="button">Aceptar Invitación</a>
+                    <a href="{app_base_url}/invitation/reject-invitation/{token}" class="button reject">Rechazar Invitación</a>
                 </div>
                 <div class="footer">
                     <p>Gracias,<br/>El equipo de CoffeTech</p>
@@ -264,7 +271,7 @@ def send_email(email, token, email_type, farm_name=None, owner_name=None, sugges
         </html>
         """
     else:
-        print("Error: Tipo de correo no reconocido.")
+        logger.error(f"Tipo de correo no reconocido: {email_type}")
         return
 
     # Crear el mensaje de correo electrónico
@@ -281,6 +288,6 @@ def send_email(email, token, email_type, farm_name=None, owner_name=None, sugges
         with smtplib.SMTP_SSL(smtp_host, smtp_port) as server:
             server.login(smtp_user, smtp_pass)
             server.sendmail(smtp_user, email, msg.as_string())
-        print(f"Correo de {email_type} enviado a {email}.")
+        logger.info(f"Correo de {email_type} enviado a {email}.")
     except Exception as e:
-        print(f"Error al enviar correo: {e}")
+        logger.error(f"Error al enviar correo a {email}: {e}")
